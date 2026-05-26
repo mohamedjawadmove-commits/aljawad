@@ -1,0 +1,2653 @@
+
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Al-Jawaad Logistics ERP - Admin & Operations Portal</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            500: '#FF6600', // Vibrant Orange Branding Accent [1]
+                            600: '#e65c00',
+                            700: '#cc5200',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts (Inter) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FullCalendar CDN for CRM Scheduling Grid -->
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom FullCalendar light theme overrides */
+        .fc {
+            --fc-border-color: #e2e8f0;
+            --fc-daygrid-event-dot-width: 8px;
+            color: #1e293b;
+        }
+        .fc .fc-col-header-cell-cushion, .fc .fc-daygrid-day-number {
+            color: #475569;
+            font-size: 0.85rem;
+            text-decoration: none;
+        }
+        .fc-theme-standard td, .fc-theme-standard th {
+            border-color: #e2e8f0 !important;
+        }
+        .fc-event {
+            cursor: pointer;
+            border-radius: 6px;
+            padding: 3px 6px;
+            font-weight: 500;
+            border: none !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Toast Notification Container -->
+    <div id="toast" class="fixed top-5 right-5 z-50 transform translate-x-full transition-all duration-300 ease-in-out opacity-0 pointer-events-none">
+        <div id="toast-content" class="flex items-center p-4 space-x-3 text-white rounded-lg shadow-lg">
+            <span id="toast-message" class="text-sm font-semibold"></span>
+        </div>
+    </div>
+
+    <!-- Calendar Detail Modal/Tooltip [6] -->
+    <div id="calendar-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 hidden">
+        <div class="bg-white border border-slate-200 rounded-xl shadow-2xl p-6 max-w-lg w-full mx-4 space-y-4">
+            <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                <h3 id="modal-order-id" class="text-lg font-bold text-brand-500">Order Profile</h3>
+                <button onclick="closeCalendarModal()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="space-y-3 text-sm">
+                <div><span class="font-semibold text-slate-500">Customer:</span> <span id="modal-cust-name" class="text-slate-800"></span></div>
+                <div><span class="font-semibold text-slate-500">Services Selected:</span> <span id="modal-service" class="text-slate-800"></span></div>
+                <div><span class="font-semibold text-slate-500">Move Timeline:</span> <span id="modal-timeline" class="text-slate-800 font-mono text-xs"></span></div>
+                <div><span class="font-semibold text-slate-500">Total Price (VAT Inc.):</span> <span id="modal-price" class="text-brand-600 font-mono font-bold"></span></div>
+                
+                <div class="border-t border-slate-100 pt-3 space-y-2">
+                    <h4 class="text-xs font-bold text-brand-500 uppercase tracking-wider">Operation Resource Allocation [6]</h4>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div><span class="font-semibold text-slate-500">Supervisors:</span> <span id="modal-supervisors" class="text-slate-800 font-medium"></span></div>
+                        <div><span class="font-semibold text-slate-500">Truck Assigned:</span> <span id="modal-truck" class="text-slate-800 font-medium"></span></div>
+                        <div><span class="font-semibold text-slate-500">Assigned Driver:</span> <span id="modal-driver" class="text-slate-800 font-medium"></span></div>
+                        <div><span class="font-semibold text-slate-500">Labor Team:</span> <span id="modal-labor" class="text-slate-800 font-medium"></span></div>
+                    </div>
+                </div>
+                
+                <div class="border-t border-slate-100 pt-3">
+                    <span class="block text-xs font-bold text-slate-500 uppercase">Operation Dispatch Notes:</span>
+                    <p id="modal-op-notes" class="text-slate-600 italic mt-1 text-xs whitespace-pre-line"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Workspace Container -->
+    <div class="flex flex-1 min-h-screen overflow-hidden">
+
+        <!-- Sidebar Navigation (Orange Highlights) [1] -->
+        <aside id="app-sidebar" class="w-64 bg-white border-r border-slate-200 text-slate-800 flex flex-col flex-shrink-0">
+            <!-- Brand Header -->
+            <div class="p-6 border-b border-slate-200 flex items-center justify-between">
+                <div>
+                    <span class="text-xl font-black tracking-wider text-brand-500 block">AL-JAWAAD</span>
+                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest block font-mono">Logistics ERP</span>
+                </div>
+                <span class="text-[10px] bg-brand-100 text-brand-600 px-2.5 py-1 rounded-full font-bold">v1.5</span>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="flex-1 px-4 py-6 space-y-6 overflow-y-auto">
+                <!-- HR Module Section -->
+                <div id="sidebar-hr-section">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">HR Module</p>
+                    <ul class="space-y-1.5">
+                        <li>
+                            <button id="btn-add-employee" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('add-employee-section')">
+                                Add Employee
+                            </button>
+                        </li>
+                        <li>
+                            <button id="btn-view-employees" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('view-employees-section')">
+                                Employee Directory
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Access Control Section -->
+                <div id="sidebar-access-section">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Access Control</p>
+                    <ul class="space-y-1.5">
+                        <li>
+                            <button id="btn-manage-permissions" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('manage-permissions-section')">
+                                Manage Permissions
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Fleet Management Section -->
+                <div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Fleet Management</p>
+                    <ul class="space-y-1.5">
+                        <li>
+                            <button id="btn-driver-mobile" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('driver-mobile-section')">
+                                Drivers Mobile Form
+                            </button>
+                        </li>
+                        <li id="sidebar-add-vehicle-link">
+                            <button id="btn-add-vehicle" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('add-vehicle-section')">
+                                Add New Vehicle
+                            </button>
+                        </li>
+                        <li id="sidebar-fleet-ledger-link">
+                            <button id="btn-fleet-ledger" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('fleet-ledger-section')">
+                                Fleet Ledger
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- CRM Section -->
+                <div id="sidebar-crm-section">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">CRM System</p>
+                    <ul class="space-y-1.5">
+                        <li>
+                            <button id="btn-add-customer" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('add-customer-section')">
+                                Add Customer
+                            </button>
+                        </li>
+                        <li>
+                            <button id="btn-create-quote" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('create-quote-section')">
+                                Create Quote
+                            </button>
+                        </li>
+                        <li>
+                            <button id="btn-quotes-directory" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('quotes-directory-section')">
+                                Quotes Directory
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Operations Section [1] -->
+                <div id="sidebar-operations-section">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Operations</p>
+                    <ul class="space-y-1.5">
+                        <li>
+                            <button id="btn-drivers-logs" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('drivers-logs-section')">
+                                Drivers Logs Records
+                            </button>
+                        </li>
+                        <li>
+                            <button id="btn-order-tracker" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('order-tracker-section')">
+                                Order Status Tracker
+                            </button>
+                        </li>
+                        <li>
+                            <button id="btn-operational-calendar" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('operational-calendar-section')">
+                                Operational Calendar
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <div class="p-4 border-t border-slate-200 text-[10px] text-slate-400 text-center font-mono">
+                Al-Jawaad Logistics Co.
+            </div>
+        </aside>
+
+        <!-- Main Workspace Area -->
+        <main class="flex-1 flex flex-col overflow-y-auto">
+            
+            <!-- Global Header -->
+            <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between">
+                <h1 id="page-title" class="text-lg font-bold text-slate-800">Add Employee</h1>
+                <div class="flex items-center space-x-6">
+                    <!-- Session Role Simulator -->
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Session Role:</span>
+                        <select id="session-role" onchange="changeSessionRole(this.value)" class="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-500/20 bg-white text-slate-800">
+                            <option value="Admin" selected>Admin / Super Admin</option>
+                            <option value="Driver">Driver Portal Only</option>
+                        </select>
+                    </div>
+                    <div class="h-8 w-px bg-slate-200"></div>
+                    <div class="flex items-center space-x-4">
+                        <span id="header-user-badge" class="text-sm text-slate-500 font-medium">Welcome, Admin</span>
+                        <div class="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-brand-500/20">ERP</div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Application Views -->
+            <div class="p-8 max-w-7xl w-full mx-auto">
+
+                <!-- HR VIEW 1: Add New Employee (Credentials Optional) [2] -->
+                <section id="add-employee-section" class="max-w-3xl mx-auto space-y-6">
+                    <div class="bg-white border border-slate-200 rounded-xl p-8 space-y-6 shadow-sm">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Register New Staff Profile</h2>
+                            <p class="text-xs text-slate-500 mt-1">Credentials and account access setups are optional [2].</p>
+                        </div>
+
+                        <form id="add-employee-form" class="space-y-6" onsubmit="handleFormSubmit(event)">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Full Name <span class="text-red-500">*</span></label>
+                                    <input type="text" id="emp-fullname" required placeholder="John Doe" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">National ID <span class="text-red-500">*</span></label>
+                                    <input type="text" id="emp-national-id" required placeholder="e.g. 10xxxxxxxx" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Job Title <span class="text-red-500">*</span></label>
+                                    <select id="emp-jobtitle" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                        <option value="" disabled selected hidden>Choose Job Title...</option>
+                                        <option value="Sales">Sales</option>
+                                        <option value="CS">CS (Customer Service)</option>
+                                        <option value="Supervisor">Supervisor</option>
+                                        <option value="Driver">Driver</option>
+                                        <option value="Warehouse Staff">Warehouse Staff</option>
+                                        <option value="Accountant">Accountant</option>
+                                        <option value="Operations Manager">Operations Manager</option>
+                                        <option value="Labor">Labor</option> <!-- Labor Option [2] -->
+                                    </select>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Phone Number <span class="text-red-500">*</span></label>
+                                    <input type="text" id="emp-phone" required placeholder="e.g. +9665XXXXXXXX" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+
+                                <div class="space-y-1.5 border-t border-dashed border-slate-200 pt-4 md:col-span-2">
+                                    <h4 class="text-xs font-bold text-brand-500 uppercase tracking-widest mb-1">System Credentials (Optional) [2]</h4>
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">System Access Level</label>
+                                    <select id="emp-access-level" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                        <option value="" selected>No Access (General Worker)</option>
+                                        <option value="Super Admin">Super Admin</option>
+                                        <option value="Supervisor">Supervisor</option>
+                                        <option value="Warehouse">Warehouse</option>
+                                        <option value="Driver">Driver</option>
+                                        <option value="Sales">Sales</option>
+                                        <option value="CS">CS</option>
+                                        <option value="Coordinator">Coordinator</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">System Username</label>
+                                    <input type="text" id="emp-username" placeholder="Leave blank if none" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+                                <div class="space-y-1.5 md:col-span-2">
+                                    <label class="block text-xs font-semibold text-slate-700">System Password</label>
+                                    <input type="password" id="emp-password" placeholder="Leave blank if none" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end space-x-3 pt-4 border-t border-slate-200">
+                                <button type="button" onclick="switchView('view-employees-section')" class="px-6 py-2.5 border border-slate-200 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors">Cancel</button>
+                                <button type="submit" id="submit-btn" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold transition-colors flex items-center shadow-lg shadow-brand-500/10">
+                                    <span id="btn-text">Save Employee</span>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- HR VIEW 2: Employee Directory -->
+                <section id="view-employees-section" class="hidden space-y-6">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">Registered Employees</h2>
+                        <p class="text-xs text-slate-500 mt-1">Complete registered workforce directory.</p>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Full Name</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">National ID</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Job Title</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Phone Number</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Access Level</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Username</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="employees-table-body" class="divide-y divide-slate-200 text-sm">
+                                    <tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">Loading directory...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- ACCESS CONTROL VIEW -->
+                <section id="manage-permissions-section" class="hidden space-y-6">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">Access Matrix Controls</h2>
+                        <p class="text-xs text-slate-500 mt-1">Assign system permissions explicitly to accounts possessing credentials.</p>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500 w-1/4">Name</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500 w-1/4">Access Role</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500 w-2/4">Feature Authorization Matrix</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="permissions-table-body" class="divide-y divide-slate-200 text-sm">
+                                    <tr><td colspan="3" class="px-6 py-8 text-center text-slate-400">Loading authorization indexes...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FLEET VIEW 1: Drivers Mobile Form (Inspection [3]) -->
+                <section id="driver-mobile-section" class="hidden py-4">
+                    <div class="max-w-[420px] mx-auto bg-slate-900 border border-slate-800 rounded-[3rem] p-4 shadow-2xl relative">
+                        <div class="flex justify-between items-center px-6 pt-2 pb-4 text-slate-400 text-xs font-mono">
+                            <span>09:41</span>
+                            <div class="w-24 h-4 bg-slate-950 rounded-full mx-auto"></div>
+                            <div class="flex space-x-1">
+                                <span>5G</span>
+                                <div class="w-4 h-2.5 bg-brand-500 rounded-sm"></div>
+                            </div>
+                        </div>
+
+                        <!-- Mobile Screen Area -->
+                        <div class="bg-white rounded-[2rem] p-5 text-slate-800 min-h-[580px] flex flex-col justify-between overflow-y-auto">
+                            <div>
+                                <div class="text-center pb-3 mb-4 border-b border-slate-200">
+                                    <span class="text-xs font-bold text-brand-500 uppercase tracking-widest">Al-Jawaad Logistics</span>
+                                    <h3 class="text-sm font-bold text-slate-900 mt-0.5">Mobile Driver Form</h3>
+                                </div>
+
+                                <form id="driver-mobile-form" class="space-y-4" onsubmit="handleDriverFormSubmit(event)">
+                                    <!-- Vehicle Selection Odometer Tracker -->
+                                    <div class="space-y-1">
+                                        <label class="block text-[11px] font-bold text-slate-500 uppercase">Vehicle / Truck ID <span class="text-red-500">*</span></label>
+                                        <select id="driver-vehicle" required onchange="handleDriverVehicleSelect(this.value)" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50"></select>
+                                        <span class="block text-[10px] text-slate-400 font-medium" id="driver-current-odom-display">Current Truck Odometer: 0 KM</span>
+                                    </div>
+
+                                    <!-- Searchable Sub-Order selection -->
+                                    <div class="space-y-1">
+                                        <label class="block text-[11px] font-bold text-slate-500 uppercase">Order ID / Sub-Order <span class="text-red-500">*</span></label>
+                                        <div class="space-y-1">
+                                            <input type="text" oninput="filterDriverOrderSelect(this.value)" placeholder="🔍 Search Order ID..." class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                                            <select id="driver-suborder-id" required class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                                                <option value="" disabled selected hidden>Choose Order...</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Odometer & Remaining calculation -->
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="space-y-1">
+                                            <label class="block text-[11px] font-bold text-slate-500 uppercase">Odometer KM <span class="text-red-500">*</span></label>
+                                            <input type="number" id="driver-odometer" required oninput="calculateDriverRemainingKm(this.value)" placeholder="New KM count" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                                        </div>
+                                        <div class="space-y-1">
+                                            <label class="block text-[11px] font-bold text-slate-500 uppercase">Trip Status <span class="text-red-500">*</span></label>
+                                            <select id="driver-trip-status" required class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                                                <option value="Loading">Loading</option>
+                                                <option value="In Transit">In Transit</option>
+                                                <option value="Unloading">Unloading</option>
+                                                <option value="Completed">Completed</option>
+                                                <option value="Maintenance">Maintenance</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-span-2">
+                                            <span class="block text-[10px] font-bold text-slate-500" id="driver-remaining-km-display">Remaining to Oil Change: — KM</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="space-y-1">
+                                            <label class="block text-[11px] font-bold text-slate-500 uppercase">Route From <span class="text-red-500">*</span></label>
+                                            <input type="text" id="driver-from" required placeholder="Origin" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                                        </div>
+                                        <div class="space-y-1">
+                                            <label class="block text-[11px] font-bold text-slate-500 uppercase">Route To <span class="text-red-500">*</span></label>
+                                            <input type="text" id="driver-to" required placeholder="Destination" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                                        </div>
+                                    </div>
+
+                                    <!-- Pre-Trip Inspections [3] -->
+                                    <div class="border-t border-slate-200 pt-3 space-y-3">
+                                        <span class="block text-[10px] font-bold text-brand-500 uppercase tracking-wider">Operational Vehicle Inspection</span>
+
+                                        <div class="space-y-1.5">
+                                            <div class="flex justify-between items-center">
+                                                <label class="text-[11px] font-bold text-slate-500 uppercase">Engine Oil Level</label>
+                                                <select id="driver-engine-oil" onchange="toggleInspectionNote('driver-engine-oil', 'oilNotes-container')" class="bg-white border border-slate-200 text-xs px-2 py-1 rounded text-slate-800 focus:outline-none">
+                                                    <option value="It's Good">It's Good</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div id="oilNotes-container" class="hidden">
+                                                <textarea id="oilNotes" rows="2" placeholder="Specify oil defects..." class="w-full px-3 py-1.5 bg-white border border-red-300 rounded-lg text-xs text-slate-800 focus:outline-none"></textarea>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-1.5">
+                                            <div class="flex justify-between items-center">
+                                                <label class="text-[11px] font-bold text-slate-500 uppercase">Tires Condition</label>
+                                                <select id="driver-tires" onchange="toggleInspectionNote('driver-tires', 'tireNotes-container')" class="bg-white border border-slate-200 text-xs px-2 py-1 rounded text-slate-800 focus:outline-none">
+                                                    <option value="It's Good">It's Good</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div id="tireNotes-container" class="hidden">
+                                                <textarea id="tireNotes" rows="2" placeholder="Specify tire defects..." class="w-full px-3 py-1.5 bg-white border border-red-300 rounded-lg text-xs text-slate-800 focus:outline-none"></textarea>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-1.5">
+                                            <div class="flex justify-between items-center">
+                                                <label class="text-[11px] font-bold text-slate-500 uppercase">Windshield Status</label>
+                                                <select id="driver-windshield" onchange="toggleInspectionNote('driver-windshield', 'windshieldNotes-container')" class="bg-white border border-slate-200 text-xs px-2 py-1 rounded text-slate-800 focus:outline-none">
+                                                    <option value="It's Good">It's Good</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div id="windshieldNotes-container" class="hidden">
+                                                <textarea id="windshieldNotes" rows="2" placeholder="Specify windshield defects..." class="w-full px-3 py-1.5 bg-white border border-red-300 rounded-lg text-xs text-slate-800 focus:outline-none"></textarea>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-1.5">
+                                            <div class="flex justify-between items-center">
+                                                <label class="text-[11px] font-bold text-slate-500 uppercase">Cargo Box & Materials</label>
+                                                <select id="driver-cargo" onchange="toggleInspectionNote('driver-cargo', 'cargoNotes-container')" class="bg-white border border-slate-200 text-xs px-2 py-1 rounded text-slate-800 focus:outline-none">
+                                                    <option value="It's Good">It's Good</option>
+                                                    <option value="Other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div id="cargoNotes-container" class="hidden">
+                                                <textarea id="cargoNotes" rows="2" placeholder="Specify cargo defects..." class="w-full px-3 py-1.5 bg-white border border-red-300 rounded-lg text-xs text-slate-800 focus:outline-none"></textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button type="submit" id="driver-submit-btn" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold transition-all shadow-lg flex items-center justify-center">
+                                        <span id="driver-btn-text">Submit Logs & Checklist</span>
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="text-[9px] text-center text-slate-400 pt-3 border-t border-slate-200">Al-Jawaad Mobile Control Sheet</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- FLEET VIEW 2: Add New Vehicle -->
+                <section id="add-vehicle-section" class="hidden max-w-3xl mx-auto">
+                    <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-8 space-y-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Add New Vehicle to Fleet</h2>
+                            <p class="text-xs text-slate-500 mt-1">Configure truck records and oil swap limitation intervals.</p>
+                        </div>
+
+                        <form id="add-vehicle-form" class="space-y-6" onsubmit="handleVehicleFormSubmit(event)">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Truck ID / Plate Number <span class="text-red-500">*</span></label>
+                                    <input type="text" id="veh-truck-id" required placeholder="e.g. TRK-4510" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Live Car KM (Initial Odometer) <span class="text-red-500">*</span></label>
+                                    <input type="number" id="veh-live-km" required placeholder="e.g. 100000" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Oil KM Change Limit <span class="text-red-500">*</span></label>
+                                    <select id="veh-oil-limit" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                        <option value="5000">5000 KM</option>
+                                        <option value="6000">6000 KM</option>
+                                        <option value="7000">7000 KM</option>
+                                        <option value="10000">10000 KM</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Last Change Oil KM <span class="text-red-500">*</span></label>
+                                    <input type="number" id="veh-last-oil" required placeholder="Odometer count at oil swap" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+                            </div>
+
+                            <div class="flex justify-end space-x-3 pt-4 border-t border-slate-200">
+                                <button type="button" onclick="switchView('fleet-ledger-section')" class="px-6 py-2.5 border border-slate-200 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors">Cancel</button>
+                                <button type="submit" id="veh-submit-btn" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold transition-colors">Register Vehicle</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- FLEET VIEW 3: Fleet Ledger -->
+                <section id="fleet-ledger-section" class="hidden space-y-6">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">Fleet Mechanical Ledger</h2>
+                        <p class="text-xs text-slate-500 mt-1">Monitors distance limits and flags oil replacement requirements dynamically.</p>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Truck ID</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Live Car KM</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Oil KM Limit</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Last Change Oil KM</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Next Change Oil KM</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Remaining KMs</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Status Check</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fleet-table-body" class="divide-y divide-slate-200 text-sm">
+                                    <tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">Loading fleet tracking lines...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- CRM VIEW 1: Add Customer [4] -->
+                <section id="add-customer-section" class="hidden max-w-3xl mx-auto">
+                    <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-8 space-y-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Add Customer Profile</h2>
+                            <p class="text-xs text-slate-500 mt-1">Configure client details with default services mapped automatically [4].</p>
+                        </div>
+
+                        <form id="add-customer-form" class="space-y-6" onsubmit="handleCustomerFormSubmit(event)">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Customer Name <span class="text-red-500">*</span></label>
+                                    <input type="text" id="cust-name" required placeholder="e.g. Abdullah Trading Co." class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Entity Type <span class="text-red-500">*</span></label>
+                                    <select id="cust-type" required onchange="handleEntityTypeChange(this.value)" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                        <option value="Individual" selected>Individual</option>
+                                        <option value="Corporate">Corporate</option>
+                                    </select>
+                                </div>
+                                <!-- Corporate Conditional Field [4] -->
+                                <div class="space-y-1.5 hidden" id="cust-corp-name-container">
+                                    <label class="block text-xs font-semibold text-slate-700">Company Name <span class="text-red-500">*</span></label>
+                                    <input type="text" id="cust-corp-name" placeholder="e.g. Al-Jawaad Corporate Group" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Phone Number <span class="text-red-500">*</span></label>
+                                    <input type="text" id="cust-phone" required placeholder="e.g. +9665XXXXXXXX" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Email Address <span class="text-xs text-slate-400 font-normal">(Optional)</span></label>
+                                    <input type="email" id="cust-email" placeholder="e.g. contact@domain.com" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+
+                                <div class="space-y-1.5 border-t border-dashed border-slate-200 pt-4 md:col-span-2">
+                                    <h4 class="text-xs font-bold text-brand-500 uppercase tracking-widest mb-1">Requested Operational Scope [4]</h4>
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Initial Move Type Selection <span class="text-red-500">*</span></label>
+                                    <select id="cust-initial-move" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                                        <option value="" disabled selected hidden>Select Move Type...</option>
+                                        <option value="Domestic Moving">Domestic Moving</option>
+                                        <option value="Dry Distribution">Dry Distribution</option>
+                                        <option value="Storage">Storage</option>
+                                        <option value="Local Moving">Local Moving</option>
+                                        <option value="Dry Transport">Dry Transport</option>
+                                        <option value="Door to Door Export">Door to Door Export</option>
+                                        <option value="Door to Door Import">Door to Door Import</option>
+                                        <option value="Refer Transport">Refer Transport</option>
+                                        <option value="Packing Services">Packing Services</option>
+                                        <option value="Port to Door Import">Port to Door Import</option>
+                                        <option value="Sterilization and Disinfection Service">Sterilization and Disinfection Service</option>
+                                        <option value="Door to Port Export">Door to Port Export</option>
+                                        <option value="Refer Distribution">Refer Distribution</option>
+                                        <option value="Inventory">Inventory</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Goods Type <span class="text-red-500">*</span></label>
+                                    <select id="cust-goods-type" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                                        <option value="Others" selected>Others</option>
+                                        <option value="Household Goods">Household Goods</option>
+                                        <option value="Office Goods">Office Goods</option>
+                                        <option value="Commercial Goods">Commercial Goods</option>
+                                        <option value="IT Goods">IT Goods</option>
+                                        <option value="Industrial Goods">Industrial Goods</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1.5 md:col-span-2">
+                                    <label class="block text-xs font-semibold text-slate-700">Source of Customer (SOC) <span class="text-red-500">*</span></label>
+                                    <select id="cust-soc" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                                        <option value="Direct Return" selected>Direct Return</option>
+                                        <option value="Google">Google</option>
+                                        <option value="Referral">Referral</option>
+                                        <option value="Instagram">Instagram</option>
+                                        <option value="Direct New">Direct New</option>
+                                        <option value="Twitter">Twitter</option>
+                                        <option value="Aljawad Truck">Aljawad Truck</option>
+                                        <option value="snap chat">snap chat</option>
+                                        <option value="Used Al Jawad previously">Used Al Jawad previously</option>
+                                        <option value="Celebrity ad">Celebrity ad</option>
+                                        <option value="Social Media">Social Media</option>
+                                        <option value="Facebook">Facebook</option>
+                                        <option value="Google Maps">Google Maps</option>
+                                        <option value="Outbound Call">Outbound Call</option>
+                                        <option value="Tiktok">Tiktok</option>
+                                        <option value="Wala Plus">Wala Plus</option>
+                                        <option value="GPT">GPT</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="flex justify-end pt-4 border-t border-slate-200">
+                                <button type="submit" id="cust-submit-btn" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold transition-colors">Register Customer Account</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- CRM VIEW 2: Create Quote (Advanced Selection Matrix & Dynamic Fields) [4] -->
+                <section id="create-quote-section" class="hidden max-w-4xl mx-auto space-y-6">
+                    <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-8 space-y-6">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Create Quote & Estimate</h2>
+                            <p class="text-xs text-slate-500 mt-1">Configure complex items, assign default values, and calculate VAT dynamically [4].</p>
+                        </div>
+
+                        <form id="add-quote-form" class="space-y-6" onsubmit="handleFormQuoteSubmit(event)">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                
+                                <!-- Filterable Customer Selection Dropdown [4] -->
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Select Customer <span class="text-red-500">*</span></label>
+                                    <div class="space-y-1">
+                                        <input type="text" id="cust-search" oninput="filterCustomerSelect(this.value)" placeholder="🔍 Type to filter..." class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-brand-500 text-slate-800">
+                                        <select id="quote-customer" required onchange="handleQuoteCustomerAutoFill(this.value)" class="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-slate-800">
+                                            <option value="" disabled selected hidden>Choose customer...</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Goods Type <span class="text-red-500">*</span></label>
+                                    <select id="quote-goods-type" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-slate-800">
+                                        <option value="Others" selected>Others</option>
+                                        <option value="Household Goods">Household Goods</option>
+                                        <option value="Office Goods">Office Goods</option>
+                                        <option value="Commercial Goods">Commercial Goods</option>
+                                        <option value="IT Goods">IT Goods</option>
+                                        <option value="Industrial Goods">Industrial Goods</option>
+                                    </select>
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Source of Customer (SOC) <span class="text-red-500">*</span></label>
+                                    <select id="quote-soc" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-slate-800">
+                                        <option value="Direct Return" selected>Direct Return</option>
+                                        <option value="Google">Google</option>
+                                        <option value="Referral">Referral</option>
+                                        <option value="Instagram">Instagram</option>
+                                        <option value="Direct New">Direct New</option>
+                                        <option value="Twitter">Twitter</option>
+                                        <option value="Aljawad Truck">Aljawad Truck</option>
+                                        <option value="snap chat">snap chat</option>
+                                        <option value="Used Al Jawad previously">Used Al Jawad previously</option>
+                                        <option value="Celebrity ad">Celebrity ad</option>
+                                        <option value="Social Media">Social Media</option>
+                                        <option value="Facebook">Facebook</option>
+                                        <option value="Google Maps">Google Maps</option>
+                                        <option value="Outbound Call">Outbound Call</option>
+                                        <option value="Tiktok">Tiktok</option>
+                                        <option value="Wala Plus">Wala Plus</option>
+                                        <option value="GPT">GPT</option>
+                                    </select>
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Start Date / From Date <span class="text-red-500">*</span></label>
+                                    <input type="date" id="quote-start-date" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors text-slate-800">
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">End Date / To Date <span class="text-red-500">*</span></label>
+                                    <input type="date" id="quote-end-date" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors text-slate-800">
+                                </div>
+
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Assign Supervisor</label>
+                                    <select id="quote-supervisor" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-slate-800">
+                                        <option value="">No Supervisor Assigned</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Assign Vehicle</label>
+                                    <select id="quote-vehicle" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-slate-800">
+                                        <option value="">No Vehicle Assigned</option>
+                                    </select>
+                                </div>
+
+                                <!-- Multi-Service Selection grid [4] -->
+                                <div class="space-y-1.5 md:col-span-2">
+                                    <span class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Scope of Services Selected <span class="text-red-500">*</span></span>
+                                    <div class="grid grid-cols-2 md:grid-cols-3 gap-2 bg-slate-50 p-4 border border-slate-200 rounded-xl" id="quote-services-selection-grid">
+                                        <!-- Checkboxes will be populated by script -->
+                                    </div>
+                                </div>
+
+                                <!-- Custom descriptions and fields block rendered dynamically [4] -->
+                                <div class="space-y-4 md:col-span-2 hidden" id="quote-services-descriptions-panel">
+                                    <h4 class="text-xs font-bold text-brand-500 uppercase tracking-widest border-b pb-2">Dynamic Move Specifications</h4>
+                                    <div class="space-y-6" id="quote-services-descriptions-container"></div>
+                                </div>
+
+                                <!-- Universal Service Inclusions / Exclusions -->
+                                <div class="space-y-1.5 md:col-span-2 border-t pt-4">
+                                    <label class="block text-xs font-semibold text-slate-700 font-mono">Service Includes <span class="text-red-500">*</span></label>
+                                    <textarea id="quote-includes" required rows="3" placeholder="Inclusions, special packaging arrangements..." class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50"></textarea>
+                                </div>
+                                <div class="space-y-1.5 md:col-span-2">
+                                    <label class="block text-xs font-semibold text-slate-700 font-mono">Service Excludes <span class="text-red-500">*</span></label>
+                                    <textarea id="quote-excludes" required rows="3" placeholder="Exclusions (e.g. customs duties, delays outside Al-Jawaad scope)..." class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50"></textarea>
+                                </div>
+
+                                <!-- Pricing Grid Configurations [4] -->
+                                <div class="space-y-1.5 border-t border-dashed border-slate-200 pt-4 md:col-span-2">
+                                    <h4 class="text-xs font-bold text-brand-500 uppercase tracking-widest mb-1">Pricing Configuration Grid</h4>
+                                </div>
+
+                                <!-- Normal Transport Pricing (Active if Storage NOT selected) -->
+                                <div class="space-y-1.5" id="quote-flat-pricing-block">
+                                    <label class="block text-xs font-semibold text-slate-700">Flat Rate Estimate (SAR)</label>
+                                    <input type="number" id="quote-flat-rate" oninput="calculateFinancialFields()" placeholder="e.g. 4500" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                                </div>
+
+                                <div class="grid grid-cols-3 gap-4 md:col-span-2 bg-slate-50 p-4 border border-slate-200 rounded-xl">
+                                    <div class="space-y-1">
+                                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Subtotal Base Price</span>
+                                        <input type="text" id="quote-base" readonly placeholder="0.00" class="w-full bg-transparent font-semibold border-none focus:ring-0 text-slate-800 text-sm cursor-not-allowed">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <span class="block text-[10px] font-bold text-slate-400 uppercase">VAT Amount (15%)</span>
+                                        <input type="text" id="quote-vat" readonly placeholder="0.00" class="w-full bg-transparent font-semibold border-none focus:ring-0 text-slate-600 text-sm cursor-not-allowed">
+                                    </div>
+                                    <div class="space-y-1">
+                                        <span class="block text-[10px] font-bold text-slate-400 uppercase">Grand Total Price</span>
+                                        <input type="text" id="quote-grand" readonly placeholder="0.00" class="w-full bg-transparent font-bold border-none focus:ring-0 text-brand-500 text-base cursor-not-allowed">
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <div class="flex justify-end pt-4 border-t border-slate-200">
+                                <button type="submit" id="quote-submit-btn" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold transition-colors">Create Estimate Profile</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- On-Screen Quote Review Panel [4] -->
+                    <div id="quote-preview-panel" class="hidden bg-white border border-slate-200 rounded-xl p-8 shadow-sm space-y-6">
+                        <div class="border-b border-slate-100 pb-4 flex justify-between items-center">
+                            <div>
+                                <h3 class="text-lg font-bold text-slate-900">Review Live Quote</h3>
+                                <p class="text-xs text-slate-400">On-screen operational validation prior to saving.</p>
+                            </div>
+                            <span class="text-xs font-mono bg-orange-100 text-orange-600 font-bold px-3 py-1 rounded-full">Draft Quotation</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4 text-xs">
+                            <div><span class="text-slate-500">Target Client Account:</span> <span id="prev-cust-name" class="font-bold text-slate-800"></span></div>
+                            <div><span class="text-slate-500">Service Line Matrix:</span> <span id="prev-service" class="font-bold text-slate-800"></span></div>
+                            <div><span class="text-slate-500">Base Price (Tax Exc.):</span> <span id="prev-base" class="font-mono text-slate-800 font-bold"></span></div>
+                            <div><span class="text-slate-500">VAT Calculation (15%):</span> <span id="prev-vat" class="font-mono text-slate-800 font-bold"></span></div>
+                            <div class="col-span-2 border-t border-dashed border-slate-100 pt-3"><span class="text-slate-500">Grand Estimated Price:</span> <span id="prev-grand" class="text-base font-bold text-brand-500"></span></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- CRM VIEW 3: Quotes Directory -->
+                <section id="quotes-directory-section" class="hidden space-y-6">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">CRM Quotes Directory</h2>
+                        <p class="text-xs text-slate-500 mt-1">Directory containing estimated financial quotes and active orders [4].</p>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Quote ID</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Customer Name</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Services</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Grand Total</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Status</th>
+                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500 text-center">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="quotes-table-body" class="divide-y divide-slate-200 text-sm">
+                                    <tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">Loading directory...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- OPERATIONS VIEW 1: Drivers Logs Records (Simulation Filtering) [5] -->
+                <section id="drivers-logs-section" class="hidden space-y-6">
+                    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-slate-900">Drivers Pre-Trip Inspections & Log Registry</h2>
+                            <p class="text-xs text-slate-500 mt-1">Pre-trip checklist streams mapped from driver updates [5].</p>
+                        </div>
+                        
+                        <!-- Simulating driver records filtering [5] -->
+                        <div class="flex items-center space-x-2 bg-white border border-slate-200 p-2.5 rounded-xl shadow-sm">
+                            <span class="text-xs font-bold text-slate-500 uppercase">Simulate Driver Name:</span>
+                            <select id="simulate-driver-select" onchange="filterDriverLogsBySimulation(this.value)" class="bg-slate-50 border border-slate-200 rounded text-xs px-2 py-1 text-slate-800 focus:outline-none">
+                                <option value="All">All Drivers</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Logged Date</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Truck ID</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Sub-Order ID</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Odometer</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Route Coordinates</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Checklist Metrics</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="driver-logs-main-table-body" class="divide-y divide-slate-200 text-xs">
+                                    <tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">Loading checklist streams...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- OPERATIONS VIEW 2: Order Status Tracker & Assignment Matrix [5] -->
+                <section id="order-tracker-section" class="hidden space-y-6">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">Order Dispatch & Assignment Tracker</h2>
+                        <p class="text-xs text-slate-500 mt-1">Change dispatch statuses and assign operational resources directly [5].</p>
+                    </div>
+
+                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead class="bg-slate-50 border-b border-slate-200">
+                                    <tr>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Order ID</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Customer Name</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Services</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Price</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Operational Dates</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Live Status</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500 text-center">Dispatch Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tracker-table-body" class="divide-y divide-slate-200 text-sm">
+                                    <tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">Loading dispatcher data...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- OPERATIONS VIEW 3: Operational Calendar [6] -->
+                <section id="operational-calendar-section" class="hidden space-y-6">
+                    <div>
+                        <h2 class="text-lg font-semibold text-slate-900">Operational Dispatch Calendar</h2>
+                        <p class="text-xs text-slate-500 mt-1">Plots live operational schedules for processing orders spanned across assignment dates [6].</p>
+                    </div>
+
+                    <!-- Calendar Render Frame -->
+                    <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-6">
+                        <div id="calendar-container"></div>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Firebase SDK Modular Imports -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration [1]
+        const firebaseConfig = {
+            apiKey: "AIzaSyBH0wJwwG5pGz85ny9sm9_yoPRSfnnK9v8",
+            authDomain: "aljawad-logistics-system.firebaseapp.com",
+            projectId: "aljawad-logistics-system",
+            storageBucket: "aljawad-logistics-system.firebasestorage.app",
+            messagingSenderId: "136819107542",
+            appId: "1:136819107542:web:d93d40598c09343a984b77"
+        };
+
+        // Initialize connection safely
+        let app, db;
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+        } catch (error) {
+            console.error("Firebase startup fault:", error);
+        }
+
+        // Global arrays to maintain real-time synced state [7]
+        window.allVehicles = [];
+        window.allEmployees = [];
+        window.allCustomers = [];
+        window.allQuotes = [];
+        window.allDriverLogs = [];
+        window.calendarInstance = null;
+
+        // Strict Service Types List [4]
+        const SERVICES_LIST = [
+            "Domestic Moving", "Dry Distribution", "Storage", "Local Moving", "Dry Transport",
+            "Door to Door Export", "Door to Door Import", "Refer Transport", "Packing Services",
+            "Port to Door Import", "Sterilization and Disinfection Service", "Door to Port Export",
+            "Refer Distribution", "Inventory"
+        ];
+
+        // Role-based layout switcher [1]
+        window.changeSessionRole = function(role) {
+            const headerUserBadge = document.getElementById('header-user-badge');
+            if (role === 'Driver') {
+                headerUserBadge.textContent = "Welcome, Active Driver";
+                document.getElementById('sidebar-hr-section').classList.add('hidden');
+                document.getElementById('sidebar-access-section').classList.add('hidden');
+                document.getElementById('sidebar-crm-section').classList.add('hidden');
+                document.getElementById('sidebar-operations-section').classList.add('hidden');
+                document.getElementById('sidebar-add-vehicle-link').classList.add('hidden');
+                document.getElementById('sidebar-fleet-ledger-link').classList.add('hidden');
+                switchView('driver-mobile-section');
+            } else {
+                headerUserBadge.textContent = "Welcome, Administrator";
+                document.getElementById('sidebar-hr-section').classList.remove('hidden');
+                document.getElementById('sidebar-access-section').classList.remove('hidden');
+                document.getElementById('sidebar-crm-section').classList.remove('hidden');
+                document.getElementById('sidebar-operations-section').classList.remove('hidden');
+                document.getElementById('sidebar-add-vehicle-link').classList.remove('hidden');
+                document.getElementById('sidebar-fleet-ledger-link').classList.remove('hidden');
+                switchView('add-employee-section');
+            }
+        }
+
+        // Navigation Manager
+        window.switchView = function(viewId) {
+            const views = [
+                'add-employee-section', 'view-employees-section', 'manage-permissions-section',
+                'driver-mobile-section', 'add-vehicle-section', 'fleet-ledger-section',
+                'add-customer-section', 'create-quote-section', 'quotes-directory-section',
+                'drivers-logs-section', 'order-tracker-section', 'operational-calendar-section'
+            ];
+            
+            views.forEach(view => {
+                const element = document.getElementById(view);
+                if (element) {
+                    if (view === viewId) {
+                        element.classList.remove('hidden');
+                    } else {
+                        element.classList.add('hidden');
+                    }
+                }
+            });
+
+            const pageTitle = document.getElementById('page-title');
+            if (viewId === 'add-employee-section') {
+                pageTitle.textContent = "Add Employee";
+                setActiveSidebarButton('btn-add-employee');
+            } else if (viewId === 'view-employees-section') {
+                pageTitle.textContent = "Employee Directory";
+                setActiveSidebarButton('btn-view-employees');
+            } else if (viewId === 'manage-permissions-section') {
+                pageTitle.textContent = "Manage Permissions";
+                setActiveSidebarButton('btn-manage-permissions');
+                loadPermissionsTable();
+            } else if (viewId === 'driver-mobile-section') {
+                pageTitle.textContent = "Drivers Mobile Form";
+                setActiveSidebarButton('btn-driver-mobile');
+            } else if (viewId === 'add-vehicle-section') {
+                pageTitle.textContent = "Add New Vehicle";
+                setActiveSidebarButton('btn-add-vehicle');
+            } else if (viewId === 'fleet-ledger-section') {
+                pageTitle.textContent = "Fleet Ledger";
+                setActiveSidebarButton('btn-fleet-ledger');
+            } else if (viewId === 'add-customer-section') {
+                pageTitle.textContent = "Add Customer Profile";
+                setActiveSidebarButton('btn-add-customer');
+            } else if (viewId === 'create-quote-section') {
+                pageTitle.textContent = "Create Quote";
+                setActiveSidebarButton('btn-create-quote');
+            } else if (viewId === 'quotes-directory-section') {
+                pageTitle.textContent = "Quotes Directory";
+                setActiveSidebarButton('btn-quotes-directory');
+            } else if (viewId === 'drivers-logs-section') {
+                pageTitle.textContent = "Drivers Logs Records";
+                setActiveSidebarButton('btn-drivers-logs');
+            } else if (viewId === 'order-tracker-section') {
+                pageTitle.textContent = "Order Status Tracker";
+                setActiveSidebarButton('btn-order-tracker');
+            } else if (viewId === 'operational-calendar-section') {
+                pageTitle.textContent = "Operational Calendar";
+                setActiveSidebarButton('btn-operational-calendar');
+                setTimeout(() => {
+                    if (window.calendarInstance) {
+                        window.calendarInstance.updateSize();
+                    }
+                }, 100);
+            }
+        }
+
+        function setActiveSidebarButton(activeBtnId) {
+            const buttons = [
+                'btn-add-employee', 'btn-view-employees', 'btn-manage-permissions', 
+                'btn-driver-mobile', 'btn-add-vehicle', 'btn-fleet-ledger',
+                'btn-add-customer', 'btn-create-quote', 'btn-quotes-directory',
+                'btn-drivers-logs', 'btn-operational-calendar', 'btn-order-tracker'
+            ];
+            buttons.forEach(btnId => {
+                const btn = document.getElementById(btnId);
+                if (btn) {
+                    if (btnId === activeBtnId) {
+                        btn.classList.add('bg-brand-50', 'text-brand-500');
+                        btn.classList.remove('text-slate-600', 'hover:bg-slate-100');
+                        btn.classList.add('border-l-4', 'border-brand-500', 'pl-3');
+                    } else {
+                        btn.classList.remove('bg-brand-50', 'text-brand-500');
+                        btn.classList.add('text-slate-600', 'hover:bg-slate-100');
+                        btn.classList.remove('border-l-4', 'border-brand-500', 'pl-3');
+                    }
+                }
+            });
+        }
+
+        // Live Real-Time database synchronization bindings using onSnapshot [7]
+        function subscribeToDatabaseStreams() {
+            if (!db) return;
+
+            // 1. Employees stream [7]
+            onSnapshot(collection(db, "employees"), (snapshot) => {
+                const employees = [];
+                snapshot.forEach(doc => {
+                    employees.push({ id: doc.id, ...doc.data() });
+                });
+                window.allEmployees = employees;
+                renderEmployeesTable(employees);
+                renderQuoteAssignmentDropdowns();
+                populateSimulatedDriversDropdown(employees);
+            });
+
+            // 2. Vehicles stream [7]
+            onSnapshot(collection(db, "vehicles"), (snapshot) => {
+                const vehicles = [];
+                snapshot.forEach(doc => {
+                    vehicles.push({ id: doc.id, ...doc.data() });
+                });
+                window.allVehicles = vehicles;
+                renderFleetLedger(vehicles);
+                renderDriverVehicleDropdown(vehicles);
+                renderQuoteAssignmentDropdowns();
+            });
+
+            // 3. Customers stream [7]
+            onSnapshot(collection(db, "customers"), (snapshot) => {
+                const customers = [];
+                snapshot.forEach(doc => {
+                    customers.push({ id: doc.id, ...doc.data() });
+                });
+                window.allCustomers = customers;
+                renderQuoteCustomersDropdown(customers);
+            });
+
+            // 4. Detailed driver logs stream [7]
+            onSnapshot(collection(db, "driver_logs"), (snapshot) => {
+                const logs = [];
+                snapshot.forEach(doc => {
+                    logs.push({ id: doc.id, ...doc.data() });
+                });
+                window.allDriverLogs = logs;
+                renderDriversLogsTable(logs);
+            });
+
+            // 5. Quotes / Orders stream [7]
+            onSnapshot(collection(db, "quotes"), (snapshot) => {
+                const quotes = [];
+                snapshot.forEach(doc => {
+                    quotes.push({ id: doc.id, ...doc.data() });
+                });
+                window.allQuotes = quotes;
+                renderQuotesDirectoryTable(quotes);
+                renderTrackerTable(quotes); 
+                updateCalendarEvents(quotes);
+                renderDriverOrderDropdown(quotes); // Fill orders dropdown for Driver form [3]
+            });
+        }
+
+
+        /* DIRECTORY RENDERING LOGICS */
+
+        function renderEmployeesTable(employees) {
+            const tableBody = document.getElementById('employees-table-body');
+            if (!tableBody) return;
+
+            if (employees.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">No employees registered yet.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = "";
+            employees.forEach(emp => {
+                const displayAccess = emp.accessLevel || "No Access";
+                const displayUsername = emp.username || "—";
+                tableBody.insertAdjacentHTML('beforeend', `
+                    <tr class="hover:bg-slate-50 transition-colors border-b border-slate-200">
+                        <td class="px-6 py-4 font-semibold text-slate-900">${escapeHTML(emp.fullName)}</td>
+                        <td class="px-6 py-4 text-slate-600 font-mono">${escapeHTML(emp.idNumber)}</td>
+                        <td class="px-6 py-4"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 border border-slate-200">${escapeHTML(emp.jobTitle)}</span></td>
+                        <td class="px-6 py-4 text-slate-600 font-mono">${escapeHTML(emp.phoneNumber)}</td>
+                        <td class="px-6 py-4"><span class="px-2.5 py-1 text-xs font-bold rounded-lg ${getAccessBadgeClass(displayAccess)}">${escapeHTML(displayAccess)}</span></td>
+                        <td class="px-6 py-4 text-slate-500 font-mono">${escapeHTML(displayUsername)}</td>
+                    </tr>
+                `);
+            });
+        }
+
+        // Driver Form vehicle select dropdown [3]
+        function renderDriverVehicleDropdown(vehicles) {
+            const selectEl = document.getElementById('driver-vehicle');
+            if (!selectEl) return;
+            selectEl.innerHTML = '<option value="" disabled selected hidden>Select Vehicle...</option>';
+            vehicles.forEach(veh => {
+                selectEl.insertAdjacentHTML('beforeend', `<option value="${veh.id}">${escapeHTML(veh.truckId)}</option>`);
+            });
+        }
+
+        // Searchable Sub-Order selection inside Driver Portal [3]
+        function renderDriverOrderDropdown(quotes) {
+            const selectEl = document.getElementById('driver-suborder-id');
+            if (!selectEl) return;
+            const currentSelected = selectEl.value;
+            selectEl.innerHTML = '<option value="" disabled selected hidden>Choose Order...</option>';
+            quotes.forEach(quote => {
+                // Populate processed active orders
+                selectEl.insertAdjacentHTML('beforeend', `<option value="${quote.orderId}">${escapeHTML(quote.orderId)} (${escapeHTML(quote.customerName)})</option>`);
+            });
+            if (currentSelected) selectEl.value = currentSelected;
+        }
+
+        window.filterDriverOrderSelect = function(query) {
+            const select = document.getElementById('driver-suborder-id');
+            const options = select.options;
+            const q = query.toLowerCase();
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].value === "") continue;
+                const text = options[i].text.toLowerCase();
+                if (text.includes(q)) {
+                    options[i].style.display = "";
+                } else {
+                    options[i].style.display = "none";
+                }
+            }
+        }
+
+        // Dynamic odometer reading update on mobile screen [3]
+        window.handleDriverVehicleSelect = function(vehId) {
+            const displayEl = document.getElementById('driver-current-odom-display');
+            if (!displayEl) return;
+            const vehicle = window.allVehicles.find(v => v.id === vehId);
+            if (vehicle) {
+                displayEl.textContent = `Current Truck Odometer: ${(Number(vehicle.liveCarKm) || 0).toLocaleString()} KM`;
+                displayEl.dataset.truckId = vehicle.truckId;
+                displayEl.dataset.lastOil = vehicle.lastChangeOilKm || 0;
+                displayEl.dataset.oilLimit = vehicle.oilKmLimit || 5000;
+            } else {
+                displayEl.textContent = "Current Truck Odometer: 0 KM";
+                displayEl.removeAttribute('data-truck-id');
+            }
+            // Trigger recalculation if odometer was already typed
+            const typedOdom = document.getElementById('driver-odometer').value;
+            if (typedOdom) calculateDriverRemainingKm(typedOdom);
+        }
+
+        // Calculate and display KM remaining dynamically on screen [3]
+        window.calculateDriverRemainingKm = function(odomValue) {
+            const displayEl = document.getElementById('driver-remaining-km-display');
+            const metricsSource = document.getElementById('driver-current-odom-display');
+            if (!displayEl || !metricsSource) return;
+
+            const typedOdom = Number(odomValue) || 0;
+            const lastOil = Number(metricsSource.dataset.lastOil) || 0;
+            const oilLimit = Number(metricsSource.dataset.oilLimit) || 5000;
+
+            if (typedOdom > 0) {
+                const nextChange = lastOil + oilLimit;
+                const remaining = nextChange - typedOdom;
+                
+                if (remaining < 500) {
+                    displayEl.className = "block text-[10px] font-bold text-red-600 animate-pulse";
+                    displayEl.textContent = `⚠️ Service Required: ${remaining.toLocaleString()} KM Remaining!`;
+                } else {
+                    displayEl.className = "block text-[10px] font-bold text-emerald-600";
+                    displayEl.textContent = `Remaining to Oil Change: ${remaining.toLocaleString()} KM`;
+                }
+            } else {
+                displayEl.className = "block text-[10px] font-bold text-slate-500";
+                displayEl.textContent = "Remaining to Oil Change: — KM";
+            }
+        }
+
+        // Fill simulated drivers filter in Operations view [5]
+        function populateSimulatedDriversDropdown(employees) {
+            const selectEl = document.getElementById('simulate-driver-select');
+            if (!selectEl) return;
+            const currentVal = selectEl.value;
+            selectEl.innerHTML = '<option value="All">All Drivers</option>';
+            employees.forEach(emp => {
+                if (emp.jobTitle === 'Driver') {
+                    selectEl.insertAdjacentHTML('beforeend', `<option value="${escapeHTML(emp.fullName)}">${escapeHTML(emp.fullName)}</option>`);
+                }
+            });
+            if (currentVal) selectEl.value = currentVal;
+        }
+
+        window.filterDriverLogsBySimulation = function(driverName) {
+            if (driverName === 'All') {
+                renderDriversLogsTable(window.allDriverLogs);
+            } else {
+                const filtered = window.allDriverLogs.filter(log => log.driverName === driverName);
+                renderDriversLogsTable(filtered);
+            }
+        }
+
+        function renderQuoteCustomersDropdown(customers) {
+            const selectEl = document.getElementById('quote-customer');
+            if (!selectEl) return;
+            
+            selectEl.innerHTML = '<option value="" disabled selected hidden>Choose customer...</option>';
+            customers.forEach(cust => {
+                selectEl.insertAdjacentHTML('beforeend', `<option value="${cust.id}">${escapeHTML(cust.name)} (${escapeHTML(cust.type)})</option>`);
+            });
+        }
+
+        window.filterCustomerSelect = function(query) {
+            const select = document.getElementById('quote-customer');
+            const options = select.options;
+            const q = query.toLowerCase();
+            for (let i = 0; i < options.length; i++) {
+                if (options[i].value === "") continue;
+                const text = options[i].text.toLowerCase();
+                if (text.includes(q)) {
+                    options[i].style.display = "";
+                } else {
+                    options[i].style.display = "none";
+                }
+            }
+        }
+
+        // Auto-fill customer profile details on quote select [4]
+        window.handleQuoteCustomerAutoFill = function(customerId) {
+            const customer = window.allCustomers.find(c => c.id === customerId);
+            if (!customer) return;
+
+            // Pre-select Good Types & SOC
+            const goodsTypeSelect = document.getElementById('quote-goods-type');
+            const socSelect = document.getElementById('quote-soc');
+
+            if (goodsTypeSelect) goodsTypeSelect.value = customer.goodsType || "Others";
+            if (socSelect) socSelect.value = customer.soc || "Direct Return";
+
+            // Check matching initial move type in checkboxes grid
+            if (customer.initialMove) {
+                const cb = document.getElementById(`cb-service-${customer.initialMove.replace(/\s+/g, '-')}`);
+                if (cb) {
+                    cb.checked = true;
+                    // Trigger manual change event to render conditional fields
+                    cb.dispatchEvent(new Event('change'));
+                }
+            }
+        }
+
+        // Render Service list grid checkboxes dynamically [4]
+        function renderServicesGridCheckboxes() {
+            const container = document.getElementById('quote-services-selection-grid');
+            if (!container) return;
+            container.innerHTML = "";
+            SERVICES_LIST.forEach(srv => {
+                const srvId = srv.replace(/\s+/g, '-');
+                container.insertAdjacentHTML('beforeend', `
+                    <label class="inline-flex items-center text-xs text-slate-600 bg-white border border-slate-200 p-2 rounded-lg cursor-pointer hover:bg-orange-50/20 transition-all">
+                        <input type="checkbox" id="cb-service-${srvId}" value="${srv}" onchange="handleServiceCheckboxToggle()" class="rounded text-brand-500 focus:ring-brand-500/50 border-slate-300 mr-2 h-4 w-4">
+                        <span>${srv}</span>
+                    </label>
+                `);
+            });
+        }
+
+        // Render custom service blocks conditionally below checkboxes [4]
+        window.handleServiceCheckboxToggle = function() {
+            const grid = document.getElementById('quote-services-selection-grid');
+            const descPanel = document.getElementById('quote-services-descriptions-panel');
+            const descContainer = document.getElementById('quote-services-descriptions-container');
+
+            if (!grid || !descContainer) return;
+
+            const selectedServices = [];
+            const checkboxes = grid.querySelectorAll('input[type="checkbox"]:checked');
+            checkboxes.forEach(cb => { selectedServices.push(cb.value); });
+
+            // Generate conditional service description block HTML [4]
+            descContainer.innerHTML = "";
+            if (selectedServices.length > 0) {
+                descPanel.classList.remove('hidden');
+                selectedServices.forEach(srv => {
+                    const srvId = srv.replace(/\s+/g, '-');
+                    
+                    // Base custom block template [4]
+                    let specificFormHTML = "";
+
+                    // If 'Domestic Moving' or 'Local Moving' [4]
+                    if (srv === 'Domestic Moving' || srv === 'Local Moving') {
+                        specificFormHTML = `
+                            <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Origin Address <span class="text-red-500">*</span></label>
+                                    <input type="text" id="mv-origin-${srvId}" required placeholder="Origin" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Destination Address <span class="text-red-500">*</span></label>
+                                    <input type="text" id="mv-dest-${srvId}" required placeholder="Destination" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Origin Floor Level <span class="text-red-500">*</span></label>
+                                    <input type="number" id="mv-orig-floor-${srvId}" required placeholder="0" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Destination Floor Level <span class="text-red-500">*</span></label>
+                                    <input type="number" id="mv-dest-floor-${srvId}" required placeholder="0" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                                <div class="col-span-2 pt-1">
+                                    <label class="inline-flex items-center text-xs text-slate-500 cursor-pointer">
+                                        <input type="checkbox" id="mv-double-handling-${srvId}" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500/50 bg-white mr-2 h-4 w-4">
+                                        <span>Double Handling Needed</span>
+                                    </label>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // If 'Dry Distribution' or 'Refer Transport' [4]
+                    else if (srv === 'Dry Distribution' || srv === 'Refer Transport') {
+                        specificFormHTML = `
+                            <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Route Details <span class="text-red-500">*</span></label>
+                                <input type="text" id="dist-route-${srvId}" required placeholder="e.g. Riyadh - Dammam Weekly Distribution" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                            </div>
+                        `;
+                    }
+
+                    // If 'Storage' [4]
+                    else if (srv === 'Storage') {
+                        specificFormHTML = `
+                            <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Storage Temperature <span class="text-red-500">*</span></label>
+                                    <select id="stor-temp-${srvId}" required class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-none">
+                                        <option value="Dry" selected>Dry</option>
+                                        <option value="Cold">Cold</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Facility City <span class="text-red-500">*</span></label>
+                                    <input type="text" id="stor-city-${srvId}" required placeholder="Jeddah Facility" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Storage Unit Type <span class="text-red-500">*</span></label>
+                                    <select id="quote-unit-type" required class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-none">
+                                        <option value="CBM">CBM (Cubic Meter)</option>
+                                        <option value="SQM">SQM (Square Meter)</option>
+                                        <option value="Palette">Palette</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Storage Unit Price (SAR) <span class="text-red-500">*</span></label>
+                                    <input type="number" id="quote-unit-price" required oninput="calculateFinancialFields()" placeholder="SAR per Unit" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                                <div class="space-y-1 col-span-2">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Storage Quantity <span class="text-red-500">*</span></label>
+                                    <input type="number" id="quote-qty" required oninput="calculateFinancialFields()" placeholder="Quantity of units" value="1" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // If 'Door to Door Export/Import' or 'Port to Door Import' [4]
+                    else if (srv === 'Door to Door Export' || srv === 'Door to Door Import' || srv === 'Port to Door Import' || srv === 'Door to Port Export') {
+                        specificFormHTML = `
+                            <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Origin Country / City <span class="text-red-500">*</span></label>
+                                    <input type="text" id="db-orig-${srvId}" required placeholder="Origin" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Destination Country / City <span class="text-red-500">*</span></label>
+                                    <input type="text" id="db-dest-${srvId}" required placeholder="Destination" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                                <div class="col-span-2 space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Floors Involved <span class="text-red-500">*</span></label>
+                                    <input type="number" id="db-floors-${srvId}" required placeholder="Floors" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                                <div class="col-span-2 space-y-1">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Heavy Equipment Support Needed</label>
+                                    <div class="flex flex-wrap gap-4 pt-1">
+                                        <label class="inline-flex items-center text-xs text-slate-500">
+                                            <input type="checkbox" id="db-crane-${srvId}" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500/50 bg-white mr-1.5 h-3.5 w-3.5"> Crane
+                                        </label>
+                                        <label class="inline-flex items-center text-xs text-slate-500">
+                                            <input type="checkbox" id="db-forklift-${srvId}" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500/50 bg-white mr-1.5 h-3.5 w-3.5"> Forklift
+                                        </label>
+                                        <label class="inline-flex items-center text-xs text-slate-500">
+                                            <input type="checkbox" id="db-boom-${srvId}" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500/50 bg-white mr-1.5 h-3.5 w-3.5"> Boom Truck
+                                        </label>
+                                        <label class="inline-flex items-center text-xs text-slate-500">
+                                            <input type="checkbox" id="db-trailer-${srvId}" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500/50 bg-white mr-1.5 h-3.5 w-3.5"> Trailer
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // If 'Packing Services' [4]
+                    else if (srv === 'Packing Services') {
+                        specificFormHTML = `
+                            <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Packing Service City <span class="text-red-500">*</span></label>
+                                    <input type="text" id="pack-city-${srvId}" required placeholder="Jeddah" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Packing Floor Level <span class="text-red-500">*</span></label>
+                                    <input type="number" id="pack-floor-${srvId}" required placeholder="Floor" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // If 'Inventory' [4]
+                    else if (srv === 'Inventory') {
+                        specificFormHTML = `
+                            <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Inventory Location City <span class="text-red-500">*</span></label>
+                                    <input type="text" id="inv-city-${srvId}" required placeholder="City" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="text-[10px] font-bold text-slate-500 uppercase">Data Status <span class="text-red-500">*</span></label>
+                                    <select id="inv-data-status-${srvId}" required class="w-full px-2 py-1.5 bg-white border border-slate-200 rounded text-xs text-slate-800 focus:outline-none">
+                                        <option value="Old Data Exists">Old Data Exists</option>
+                                        <option value="Start from Zero">Start from Zero</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-2 space-y-1">
+                                    <label class="inline-flex items-center text-xs text-slate-500 cursor-pointer">
+                                        <input type="checkbox" id="inv-barcode-${srvId}" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500/50 bg-white mr-2 h-4 w-4">
+                                        <span>Barcoding & Labeling Service Needed</span>
+                                    </label>
+                                </div>
+                                <div class="col-span-2 space-y-1">
+                                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Required Integrations</label>
+                                    <div class="flex space-x-4 pt-1">
+                                        <label class="inline-flex items-center text-xs text-slate-500">
+                                            <input type="checkbox" id="inv-odoo-${srvId}" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500/50 bg-white mr-1.5 h-3.5 w-3.5"> Odoo System
+                                        </label>
+                                        <label class="inline-flex items-center text-xs text-slate-500">
+                                            <input type="checkbox" id="inv-gsheet-${srvId}" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500/50 bg-white mr-1.5 h-3.5 w-3.5"> Google Sheet
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+
+                    // Render dynamic Scope description container [4]
+                    descContainer.insertAdjacentHTML('beforeend', `
+                        <div class="space-y-2 border border-slate-100 bg-white p-4 rounded-xl shadow-sm relative">
+                            <span class="text-xs font-bold text-brand-500 block uppercase tracking-wider">${srv} Specific Form</span>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase">Service Description <span class="text-red-500">*</span></label>
+                                    <textarea id="desc-service-${srvId}" required rows="2" placeholder="Write specifications, items details, metrics..." class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-500"></textarea>
+                                </div>
+                                <div class="space-y-1">
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase">Other Notes</label>
+                                    <textarea id="notes-service-${srvId}" rows="2" placeholder="Input manual details..." class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-500"></textarea>
+                                </div>
+                            </div>
+                            <!-- Inject service specific fields dynamically -->
+                            ${specificFormHTML}
+                        </div>
+                    `);
+                });
+            } else {
+                descPanel.classList.add('hidden');
+            }
+
+            // Storage pricing checker [4]
+            const isStorageSelected = selectedServices.includes('Storage');
+            const flatPricingBlock = document.getElementById('quote-flat-pricing-block');
+
+            if (isStorageSelected) {
+                flatPricingBlock.classList.add('hidden');
+                document.getElementById('quote-flat-rate').removeAttribute('required');
+            } else {
+                flatPricingBlock.classList.remove('hidden');
+                document.getElementById('quote-flat-rate').setAttribute('required', 'true');
+            }
+
+            // Recalculate financials live
+            calculateFinancialFields();
+        }
+
+        // Fill CRM assignment lists
+        function renderQuoteAssignmentDropdowns() {
+            const superSelect = document.getElementById('quote-supervisor');
+            const vehSelect = document.getElementById('quote-vehicle');
+            if (!superSelect || !vehSelect) return;
+
+            const currentSuper = superSelect.value;
+            const currentVeh = vehSelect.value;
+
+            superSelect.innerHTML = '<option value="">No Supervisor Assigned</option>';
+            vehSelect.innerHTML = '<option value="">No Vehicle Assigned</option>';
+
+            window.allEmployees.forEach(emp => {
+                if (emp.jobTitle === 'Supervisor') {
+                    superSelect.insertAdjacentHTML('beforeend', `<option value="${escapeHTML(emp.fullName)}">${escapeHTML(emp.fullName)}</option>`);
+                }
+            });
+
+            window.allVehicles.forEach(veh => {
+                vehSelect.insertAdjacentHTML('beforeend', `<option value="${escapeHTML(veh.truckId)}">${escapeHTML(veh.truckId)}</option>`);
+            });
+
+            superSelect.value = currentSuper;
+            vehSelect.value = currentVeh;
+        }
+
+        function renderFleetLedger(vehicles) {
+            const tableBody = document.getElementById('fleet-table-body');
+            if (!tableBody) return;
+
+            if (vehicles.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">No vehicles registered yet.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = "";
+            vehicles.forEach(veh => {
+                const liveKm = Number(veh.liveCarKm) || 0;
+                const oilLimit = Number(veh.oilKmLimit) || 0;
+                const lastOil = Number(veh.lastChangeOilKm) || 0;
+                const nextOilChangeKm = lastOil + oilLimit;
+                const remainKms = nextOilChangeKm - liveKm;
+                const isUnderThreshold = remainKms < 500;
+
+                tableBody.insertAdjacentHTML('beforeend', `
+                    <tr class="border-b border-slate-200 transition-all ${isUnderThreshold ? 'bg-red-50 text-red-900 font-medium' : 'hover:bg-slate-50'}">
+                        <td class="px-6 py-4 font-bold text-slate-900">${escapeHTML(veh.truckId)}</td>
+                        <td class="px-6 py-4 font-mono text-slate-600">${liveKm.toLocaleString()} KM</td>
+                        <td class="px-6 py-4 font-mono text-slate-600">${oilLimit.toLocaleString()} KM</td>
+                        <td class="px-6 py-4 font-mono text-slate-600">${lastOil.toLocaleString()} KM</td>
+                        <td class="px-6 py-4 font-mono text-slate-700 font-semibold">${nextOilChangeKm.toLocaleString()} KM</td>
+                        <td class="px-6 py-4 font-mono font-bold ${isUnderThreshold ? 'text-red-600 animate-pulse' : 'text-brand-500'}">${remainKms.toLocaleString()} KM</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2.5 py-1 text-xs font-bold rounded bg-slate-100 text-slate-700 border border-slate-200">${escapeHTML(veh.status || "Available")}</span>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        function renderDriversLogsTable(logs) {
+            const tableBody = document.getElementById('driver-logs-main-table-body');
+            if (!tableBody) return;
+
+            if (logs.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">No driver logs on record.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = "";
+            logs.forEach(log => {
+                const dateLabel = new Date(log.timestamp).toLocaleString();
+                const oilDisplay = log.engineOil === 'Other' ? `<span class="text-red-500 font-semibold block">Oil: ${escapeHTML(log.oilNotes || "Other")}</span>` : `<span class="text-slate-500 block">Oil: Good</span>`;
+                const tireDisplay = log.tires === 'Other' ? `<span class="text-red-500 font-semibold block">Tires: ${escapeHTML(log.tireNotes || "Other")}</span>` : `<span class="text-slate-500 block">Tires: Good</span>`;
+                const windshieldDisplay = log.windshield === 'Other' ? `<span class="text-red-500 font-semibold block">Windshield: ${escapeHTML(log.windshieldNotes || "Other")}</span>` : `<span class="text-slate-500 block">Windshield: Good</span>`;
+                const cargoDisplay = log.cargo === 'Other' ? `<span class="text-red-500 font-semibold block">Cargo: ${escapeHTML(log.cargoNotes || "Other")}</span>` : `<span class="text-slate-500 block">Cargo: Good</span>`;
+
+                tableBody.insertAdjacentHTML('beforeend', `
+                    <tr class="hover:bg-slate-50 border-b border-slate-200 transition-colors">
+                        <td class="px-4 py-3 font-mono text-slate-500">${dateLabel}</td>
+                        <td class="px-4 py-3 font-bold text-slate-900">${escapeHTML(log.truckId)}</td>
+                        <td class="px-4 py-3 text-brand-500 font-semibold font-mono">${escapeHTML(log.subOrderId)}</td>
+                        <td class="px-4 py-3 font-mono text-slate-700">${(Number(log.odometer)||0).toLocaleString()} KM</td>
+                        <td class="px-4 py-3 text-slate-600 font-medium">${escapeHTML(log.routeFrom)} ➔ ${escapeHTML(log.routeTo)}</td>
+                        <td class="px-4 py-3 space-y-1">
+                            ${oilDisplay} ${tireDisplay} ${windshieldDisplay} ${cargoDisplay}
+                        </td>
+                        <td class="px-4 py-3"><span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200 font-bold">${escapeHTML(log.tripStatus)}</span></td>
+                    </tr>
+                `);
+            });
+        }
+
+
+        /* CRM CALCULATOR & AUTOFILL SERVICES MATRIX */
+
+        window.calculateFinancialFields = function() {
+            const grid = document.getElementById('quote-services-selection-grid');
+            if (!grid) return;
+
+            const selectedServices = [];
+            const checkboxes = grid.querySelectorAll('input[type="checkbox"]:checked');
+            checkboxes.forEach(cb => { selectedServices.push(cb.value); });
+
+            const isStorageSelected = selectedServices.includes('Storage');
+            let basePrice = 0;
+
+            if (isStorageSelected) {
+                const unitPrice = parseFloat(document.getElementById('quote-unit-price').value) || 0;
+                const qty = parseFloat(document.getElementById('quote-qty').value) || 0;
+                basePrice = unitPrice * qty;
+            } else {
+                basePrice = parseFloat(document.getElementById('quote-flat-rate').value) || 0;
+            }
+
+            const vat = basePrice * 0.15;
+            const grand = basePrice + vat;
+
+            document.getElementById('quote-base').value = basePrice.toFixed(2);
+            document.getElementById('quote-vat').value = vat.toFixed(2);
+            document.getElementById('quote-grand').value = grand.toFixed(2);
+
+            // Trigger on-screen visualization panel updates [4]
+            const custSelect = document.getElementById('quote-customer');
+            const custName = custSelect.selectedIndex >= 0 ? custSelect.options[custSelect.selectedIndex].text : "Unassigned";
+
+            document.getElementById('prev-cust-name').textContent = custName;
+            document.getElementById('prev-service').textContent = selectedServices.join(', ') || "No Service Selected";
+            document.getElementById('prev-base').textContent = `${basePrice.toFixed(2)} SAR`;
+            document.getElementById('prev-vat').textContent = `${vat.toFixed(2)} SAR`;
+            document.getElementById('prev-grand').textContent = `${grand.toFixed(2)} SAR`;
+
+            if (selectedServices.length > 0) {
+                document.getElementById('quote-preview-panel').classList.remove('hidden');
+            } else {
+                document.getElementById('quote-preview-panel').classList.add('hidden');
+            }
+        }
+
+
+        /* DIRECTORY PDF INVOICE LAYER [4] */
+
+        function renderQuotesDirectoryTable(quotes) {
+            const tableBody = document.getElementById('quotes-table-body');
+            if (!tableBody) return;
+
+            if (quotes.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">No active quotes on record.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = "";
+            quotes.forEach(q => {
+                const total = Number(q.estimatedPrice) || 0;
+                const servicesString = (q.selectedServices || [q.serviceType]).join(', ');
+                tableBody.insertAdjacentHTML('beforeend', `
+                    <tr class="hover:bg-slate-50 border-b border-slate-200 transition-all">
+                        <td class="px-6 py-4 font-bold text-brand-500 font-mono">${escapeHTML(q.orderId)}</td>
+                        <td class="px-6 py-4 font-semibold text-slate-800">${escapeHTML(q.customerName)}</td>
+                        <td class="px-6 py-4"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded text-xs block truncate max-w-xs">${escapeHTML(servicesString)}</span></td>
+                        <td class="px-6 py-4 font-mono font-bold text-slate-800">${total.toLocaleString()} SAR</td>
+                        <td class="px-6 py-4">
+                            <span class="px-2.5 py-1 text-xs font-bold rounded-lg bg-orange-50 text-orange-500 border border-orange-200">${escapeHTML(q.status || 'Quot')}</span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="printQuoteInvoice('${q.id}')" class="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white rounded text-xs font-bold transition-colors">
+                                Print PDF
+                            </button>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        window.printQuoteInvoice = function(quoteId) {
+            const quote = window.allQuotes.find(q => q.id === quoteId);
+            if (!quote) return;
+
+            const basePrice = Number(quote.basePrice) || 0;
+            const vat = Number(quote.vat) || 0;
+            const total = Number(quote.estimatedPrice) || 0;
+            const srvString = (quote.selectedServices || [quote.serviceType]).join(', ');
+
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                <head>
+                    <title>Quotation - ${quote.orderId}</title>
+                    <style>
+                        body { font-family: 'Helvetica Neue', 'Inter', sans-serif; padding: 40px; color: #334155; background: #fff; line-height: 1.6; }
+                        .invoice-card { border-top: 10px solid #FF6600; padding-top: 20px; }
+                        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #f1f5f9; padding-bottom: 20px; }
+                        .logo { font-size: 26px; font-weight: 900; color: #FF6600; letter-spacing: -0.5px; }
+                        .invoice-title { font-size: 20px; font-weight: 800; color: #1e293b; text-align: right; }
+                        .meta-section { display: flex; justify-content: space-between; margin-top: 30px; font-size: 13px; }
+                        .meta-box { width: 45%; }
+                        .table { width: 100%; border-collapse: collapse; margin-top: 40px; }
+                        .table th { background: #f8fafc; border-bottom: 2px solid #e2e8f0; color: #475569; font-weight: bold; text-align: left; padding: 12px; font-size: 11px; text-transform: uppercase; }
+                        .table td { border-bottom: 1px solid #f1f5f9; padding: 12px; font-size: 13px; }
+                        .total-grid { width: 300px; margin-left: auto; margin-top: 30px; border-collapse: collapse; font-size: 13px; }
+                        .total-grid td { padding: 6px 12px; }
+                        .grand-total { border-top: 2px solid #FF6600; color: #FF6600; font-weight: bold; font-size: 16px; }
+                        .scope-section { margin-top: 40px; display: flex; justify-content: space-between; gap: 20px; }
+                        .scope-box { width: 50%; padding: 15px; background: #f8fafc; border-radius: 8px; border-left: 4px solid #FF6600; font-size: 12px; }
+                        .scope-box h4 { margin: 0 0 8px 0; color: #1e293b; font-size: 13px; font-weight: bold; }
+                        .footer { margin-top: 60px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+                    </style>
+                </head>
+                <body>
+                    <div class="invoice-card">
+                        <div class="header">
+                            <div class="logo">AL-JAWAAD LOGISTICS</div>
+                            <div class="invoice-title">OFFICIAL QUOTATION<br/><span style="font-size: 12px; color: #64748b; font-weight: normal;">Status: ${escapeHTML(quote.status || 'Quot')}</span></div>
+                        </div>
+                        <div class="meta-section">
+                            <div class="meta-box">
+                                <strong>Bill To:</strong><br/>
+                                Customer Account: ${escapeHTML(quote.customerName)}<br/>
+                                Operational Supervisor: ${escapeHTML(quote.assignedSupervisor || 'None')}<br/>
+                                Assigned Truck ID: ${escapeHTML(quote.assignedTruck || 'None')}<br/>
+                                Operational Driver: ${escapeHTML(quote.assignedDriver || 'None')}
+                            </div>
+                            <div class="meta-box" style="text-align: right;">
+                                <strong>Tracking Coordinates:</strong><br/>
+                                Quote Reference: ${escapeHTML(quote.orderId)}<br/>
+                                Assigned Timeline: ${escapeHTML(quote.assignedDateFrom || 'Unscheduled')} to ${escapeHTML(quote.assignedDateTo || 'Unscheduled')}<br/>
+                                Date Generated: ${new Date().toLocaleDateString()}
+                            </div>
+                        </div>
+
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Service Description</th>
+                                    <th style="text-align: right;">Total Base Rate (SAR)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>${escapeHTML(srvString)}</strong><br/><span style="color: #64748b; font-size: 11px;">Goods Type: ${escapeHTML(quote.goodsType || 'Others')} (Source: ${escapeHTML(quote.soc || 'Direct')})</span></td>
+                                    <td style="text-align: right;">${basePrice.toLocaleString()} SAR</td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <table class="total-grid">
+                            <tr>
+                                <td>Base Subtotal:</td>
+                                <td style="text-align: right;">${basePrice.toLocaleString()} SAR</td>
+                            </tr>
+                            <tr>
+                                <td>VAT Amount (15%):</td>
+                                <td style="text-align: right;">${vat.toLocaleString()} SAR</td>
+                            </tr>
+                            <tr class="grand-total">
+                                <td>Grand Total:</td>
+                                <td style="text-align: right;">${total.toLocaleString()} SAR</td>
+                            </tr>
+                        </table>
+
+                        <div class="scope-section">
+                            <div class="scope-box">
+                                <h4>Service Inclusions:</h4>
+                                <div>${escapeHTML(quote.serviceIncludes || 'Not specified.').replace(/\n/g, '<br/>')}</div>
+                            </div>
+                            <div class="scope-box" style="border-left-color: #94a3b8;">
+                                <h4>Service Exclusions:</h4>
+                                <div>${escapeHTML(quote.serviceExcludes || 'Not specified.').replace(/\n/g, '<br/>')}</div>
+                            </div>
+                        </div>
+
+                        <div class="footer">
+                            Thank you for selecting Al-Jawaad Logistics Co. for your supply chain requirements.
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+        }
+
+
+        /* NEW VIEW: ADVANCED OPERATIONS STATUS TRACKER [5] */
+
+        function renderTrackerTable(quotes) {
+            const tableBody = document.getElementById('tracker-table-body');
+            if (!tableBody) return;
+
+            if (quotes.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-slate-400">No active Orders to track.</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = "";
+            quotes.forEach(q => {
+                const currentStatus = q.status || "Quot";
+                
+                // Color mapping for Status Badges [5]
+                let badgeClass = "bg-orange-50 text-orange-500 border border-orange-200"; // Quot
+                if (currentStatus === "Process") badgeClass = "bg-emerald-50 text-emerald-600 border border-emerald-200";
+                if (currentStatus === "Finished" || currentStatus === "Closed") badgeClass = "bg-blue-50 text-blue-600 border border-blue-200";
+                if (currentStatus === "Problem") badgeClass = "bg-red-50 text-red-600 border border-red-200";
+                if (currentStatus === "Re Fix") badgeClass = "bg-purple-50 text-purple-600 border border-purple-200";
+
+                // Map options for assignment selects
+                let statusOptions = "";
+                ["Quot", "Process", "Finished", "Problem", "Re Fix", "Closed"].forEach(st => {
+                    statusOptions += `<option value="${st}" ${st === currentStatus ? 'selected' : ''}>${st}</option>`;
+                });
+
+                // Gather Supervisor lists
+                let supervisorCheckboxes = "";
+                window.allEmployees.forEach(emp => {
+                    if (emp.jobTitle === 'Supervisor') {
+                        const isChecked = (q.assignedSupervisors || []).includes(emp.fullName) ? 'checked' : '';
+                        supervisorCheckboxes += `
+                            <label class="inline-flex items-center text-xs text-slate-600 mr-2 mb-1 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                                <input type="checkbox" value="${emp.fullName}" ${isChecked} class="order-supervisors-${q.id} rounded text-brand-500 mr-1.5 h-3.5 w-3.5">
+                                ${emp.fullName}
+                            </label>
+                        `;
+                    }
+                });
+
+                // Gather Labor team list
+                let laborCheckboxes = "";
+                window.allEmployees.forEach(emp => {
+                    if (emp.jobTitle === 'Labor') {
+                        const isChecked = (q.assignedLabor || []).includes(emp.fullName) ? 'checked' : '';
+                        laborCheckboxes += `
+                            <label class="inline-flex items-center text-xs text-slate-600 mr-2 mb-1 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded">
+                                <input type="checkbox" value="${emp.fullName}" ${isChecked} class="order-labor-${q.id} rounded text-brand-500 mr-1.5 h-3.5 w-3.5">
+                                ${emp.fullName}
+                            </label>
+                        `;
+                    }
+                });
+
+                // Vehicles list dropdown option
+                let vehicleOptions = '<option value="">Choose Truck ID...</option>';
+                window.allVehicles.forEach(veh => {
+                    vehicleOptions += `<option value="${veh.truckId}" ${veh.truckId === q.assignedTruck ? 'selected' : ''}>${veh.truckId}</option>`;
+                });
+
+                // Drivers list dropdown options
+                let driverOptions = '<option value="">Choose Driver...</option>';
+                window.allEmployees.forEach(emp => {
+                    if (emp.jobTitle === 'Driver') {
+                        driverOptions += `<option value="${emp.fullName}" ${emp.fullName === q.assignedDriver ? 'selected' : ''}>${emp.fullName}</option>`;
+                    }
+                });
+
+                // Compile sales notes from multi service inputs
+                const salesNotesText = `Services: ${(q.selectedServices || [q.serviceType]).join(', ')}\nInclusions: ${q.serviceIncludes || 'None'}\nExclusions: ${q.serviceExcludes || 'None'}`;
+
+                tableBody.insertAdjacentHTML('beforeend', `
+                    <tr class="hover:bg-slate-50 border-b border-slate-200 transition-colors">
+                        <td class="px-4 py-3 font-bold text-slate-900 font-mono">${escapeHTML(q.orderId)}</td>
+                        <td class="px-4 py-3 font-semibold text-slate-800">${escapeHTML(q.customerName)}</td>
+                        <td class="px-4 py-3"><span class="px-2 py-0.5 bg-slate-100 text-slate-700 rounded text-xs font-semibold block truncate max-w-xs">${escapeHTML((q.selectedServices || [q.serviceType]).join(', '))}</span></td>
+                        <td class="px-4 py-3 font-mono font-bold text-slate-800">${(Number(q.estimatedPrice) || 0).toLocaleString()} SAR</td>
+                        <td class="px-4 py-3 font-mono text-slate-600 text-xs">${q.assignedDateFrom || 'Unscheduled'} to ${q.assignedDateTo || 'Unscheduled'}</td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-0.5 text-xs font-bold rounded-lg ${badgeClass}">${escapeHTML(currentStatus)}</span>
+                        </td>
+                        <td class="px-4 py-3 text-center">
+                            <button onclick="toggleRowAssignmentPanel('${q.id}')" class="px-3 py-1 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">
+                                Dispatch Assignment
+                            </button>
+                        </td>
+                    </tr>
+                    <!-- EXPANDABLE ASSIGNMENT MATRIX ROW [5] -->
+                    <tr id="assignment-panel-${q.id}" class="hidden bg-slate-50/50">
+                        <td colspan="7" class="p-6 border-b border-slate-200">
+                            <div class="max-w-4xl bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-sm">
+                                <div class="flex justify-between items-center pb-2 border-b">
+                                    <h4 class="text-sm font-bold text-brand-500 uppercase tracking-widest">Operational Dispatch Matrix: ${q.orderId}</h4>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-xs font-bold text-slate-500 uppercase">Change Status:</span>
+                                        <select id="update-status-${q.id}" class="bg-slate-50 border border-slate-200 rounded text-xs font-semibold px-2 py-1 text-slate-800 focus:outline-none">
+                                            ${statusOptions}
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <!-- Date assignments [5] -->
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div class="space-y-1">
+                                            <label class="block text-[10px] font-bold text-slate-400 uppercase">Operation Start Date</label>
+                                            <input type="date" id="update-date-from-${q.id}" value="${q.assignedDateFrom || ''}" class="w-full px-2 py-1.5 border border-slate-200 rounded text-xs">
+                                        </div>
+                                        <div class="space-y-1">
+                                            <label class="block text-[10px] font-bold text-slate-400 uppercase">Operation End Date</label>
+                                            <input type="date" id="update-date-to-${q.id}" value="${q.assignedDateTo || ''}" class="w-full px-2 py-1.5 border border-slate-200 rounded text-xs">
+                                        </div>
+                                    </div>
+
+                                    <!-- Vehicle Assignment dropdown [5] -->
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase">Assign Vehicle / Truck</label>
+                                        <select id="update-truck-${q.id}" class="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-white">
+                                            ${vehicleOptions}
+                                        </select>
+                                    </div>
+
+                                    <!-- Driver Assignment dropdown [5] -->
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase">Assign Driver</label>
+                                        <select id="update-driver-${q.id}" class="w-full px-2 py-1.5 border border-slate-200 rounded text-xs bg-white">
+                                            ${driverOptions}
+                                        </select>
+                                    </div>
+
+                                    <!-- Assign Supervisors Checkbox List [5] -->
+                                    <div class="space-y-1 md:col-span-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase">Assign Supervisors</label>
+                                        <div class="flex flex-wrap pt-1">${supervisorCheckboxes || '<span class="text-xs text-slate-400">No Supervisor staff configured yet.</span>'}</div>
+                                    </div>
+
+                                    <!-- Assign Labor Checkbox List [5] -->
+                                    <div class="space-y-1 md:col-span-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase">Assign Labor / Workers</label>
+                                        <div class="flex flex-wrap pt-1">${laborCheckboxes || '<span class="text-xs text-slate-400">No Laborers staff configured yet.</span>'}</div>
+                                    </div>
+
+                                    <!-- Note blocks [5] -->
+                                    <div class="space-y-1 md:col-span-2">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase">Sales Notes (Read-Only)</label>
+                                        <textarea readonly class="w-full p-2 bg-slate-50 border border-slate-200 rounded text-xs text-slate-500 font-mono cursor-not-allowed" rows="2">${escapeHTML(salesNotesText)}</textarea>
+                                    </div>
+
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase">Operation Notes (Editable)</label>
+                                        <textarea id="update-op-notes-${q.id}" class="w-full p-2 border border-slate-200 rounded text-xs text-slate-700" rows="3" placeholder="Input operational guidelines, dispatch parameters...">${escapeHTML(q.operationNotes || '')}</textarea>
+                                    </div>
+
+                                    <div class="space-y-1">
+                                        <label class="block text-[10px] font-bold text-slate-400 uppercase">Other Notes (Editable)</label>
+                                        <textarea id="update-other-notes-${q.id}" class="w-full p-2 border border-slate-200 rounded text-xs text-slate-700" rows="3" placeholder="Input manual details...">${escapeHTML(q.otherNotes || '')}</textarea>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-end pt-3 border-t">
+                                    <button onclick="saveOrderAssignments('${q.id}')" class="px-5 py-2 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold transition-all shadow-md">
+                                        Save Operational Assignment
+                                    </button>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        window.toggleRowAssignmentPanel = function(orderId) {
+            const panel = document.getElementById(`assignment-panel-${orderId}`);
+            if (panel) panel.classList.toggle('hidden');
+        }
+
+        // Save complete operational parameters to quote document [5]
+        window.saveOrderAssignments = async function(qId) {
+            if (!db) return;
+
+            const dateFrom = document.getElementById(`update-date-from-${qId}`).value;
+            const dateTo = document.getElementById(`update-date-to-${qId}`).value;
+            const assignedTruck = document.getElementById(`update-truck-${qId}`).value;
+            const assignedDriver = document.getElementById(`update-driver-${qId}`).value;
+            const operationNotes = document.getElementById(`update-op-notes-${qId}`).value.trim();
+            const otherNotes = document.getElementById(`update-other-notes-${qId}`).value.trim();
+            const status = document.getElementById(`update-status-${qId}`).value;
+
+            // Extract multiple selections from checklists [5]
+            const superBoxes = document.querySelectorAll(`.order-supervisors-${qId}:checked`);
+            const assignedSupervisors = Array.from(superBoxes).map(cb => cb.value);
+
+            const laborBoxes = document.querySelectorAll(`.order-labor-${qId}:checked`);
+            const assignedLabor = Array.from(laborBoxes).map(cb => cb.value);
+
+            try {
+                const quoteRef = doc(db, "quotes", qId);
+                await updateDoc(quoteRef, {
+                    assignedDateFrom: dateFrom || null,
+                    assignedDateTo: dateTo || null,
+                    assignedTruck: assignedTruck || null,
+                    assignedDriver: assignedDriver || null,
+                    operationNotes: operationNotes || null,
+                    otherNotes: otherNotes || null,
+                    status: status,
+                    assignedSupervisors: assignedSupervisors,
+                    assignedLabor: assignedLabor
+                });
+
+                showToast("Operational parameters successfully updated and synced!", "success");
+                // Close panel
+                toggleRowAssignmentPanel(qId);
+            } catch (error) {
+                console.error("Assignment lifecycle exception:", error);
+                showToast("Failed to assign operational fields.", "error");
+            }
+        }
+
+
+        /* TRANSACTION WRITING LAYERS */
+
+        // Write Employee record [2]
+        window.handleFormSubmit = async function(event) {
+            event.preventDefault();
+            if (!db) return;
+
+            const submitBtn = document.getElementById('submit-btn');
+            const fullName = document.getElementById('emp-fullname').value.trim();
+            const idNumber = document.getElementById('emp-national-id').value.trim();
+            const jobTitle = document.getElementById('emp-jobtitle').value;
+            const phoneNumber = document.getElementById('emp-phone').value.trim();
+            
+            // Extract optional credentials [2]
+            const accessLevel = document.getElementById('emp-access-level').value || null;
+            const username = document.getElementById('emp-username').value.trim() || null;
+            const password = document.getElementById('emp-password').value.trim() || null;
+
+            submitBtn.disabled = true;
+
+            try {
+                await addDoc(collection(db, "employees"), {
+                    fullName, idNumber, jobTitle, phoneNumber,
+                    accessLevel, username, password,
+                    allowedScreens: [],
+                    createdAt: new Date().toISOString()
+                });
+
+                showToast("Employee profile registered successfully!", "success");
+                document.getElementById('add-employee-form').reset();
+                setTimeout(() => { switchView('view-employees-section'); }, 1000);
+            } catch (error) {
+                console.error("Firestore error:", error);
+                showToast("An error occurred during transaction execution.", "error");
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+        // Add Customer Form handler [4]
+        window.handleEntityTypeChange = function(type) {
+            const corpContainer = document.getElementById('cust-corp-name-container');
+            if (type === 'Corporate') {
+                corpContainer.classList.remove('hidden');
+                document.getElementById('cust-corp-name').setAttribute('required', 'true');
+            } else {
+                corpContainer.classList.add('hidden');
+                document.getElementById('cust-corp-name').removeAttribute('required');
+            }
+        }
+
+        window.handleCustomerFormSubmit = async function(event) {
+            event.preventDefault();
+            if (!db) return;
+
+            const name = document.getElementById('cust-name').value.trim();
+            const type = document.getElementById('cust-type').value;
+            const phone = document.getElementById('cust-phone').value.trim();
+            const email = document.getElementById('cust-email').value.trim() || null; // Optional email [4]
+            const initialMove = document.getElementById('cust-initial-move').value;
+            const goodsType = document.getElementById('cust-goods-type').value;
+            const soc = document.getElementById('cust-soc').value;
+
+            const companyName = type === 'Corporate' ? document.getElementById('cust-corp-name').value.trim() : null;
+
+            try {
+                await addDoc(collection(db, "customers"), {
+                    name, type, phone, email, initialMove, goodsType, soc, companyName,
+                    createdAt: new Date().toISOString()
+                });
+                showToast("Customer profile saved successfully!", "success");
+                document.getElementById('add-customer-form').reset();
+                // Trigger conditional hide
+                handleEntityTypeChange("Individual");
+                setTimeout(() => { switchView('create-quote-section'); }, 1000);
+            } catch (error) {
+                console.error("CRM error:", error);
+                showToast("An error occurred creating customer profile.", "error");
+            }
+        }
+
+        // Create Quote Form Submit [4]
+        window.handleFormQuoteSubmit = async function(event) {
+            event.preventDefault();
+            if (!db) return;
+
+            const custSelect = document.getElementById('quote-customer');
+            const goodsType = document.getElementById('quote-goods-type').value;
+            const soc = document.getElementById('quote-soc').value;
+            
+            // Gather selected multiple services [4]
+            const selectedServices = [];
+            const checkboxes = document.getElementById('quote-services-selection-grid').querySelectorAll('input[type="checkbox"]:checked');
+            checkboxes.forEach(cb => { selectedServices.push(cb.value); });
+
+            if (selectedServices.length === 0) {
+                showToast("Please select at least one Service Line to calculate Quote.", "error");
+                return;
+            }
+
+            // Gather service specifications description blocks [4]
+            const servicesDescriptions = {};
+            selectedServices.forEach(srv => {
+                const srvId = srv.replace(/\s+/g, '-');
+                const descVal = document.getElementById(`desc-service-${srvId}`).value.trim();
+                const noteVal = document.getElementById(`notes-service-${srvId}`).value.trim();
+                servicesDescriptions[`desc_${srvId}`] = descVal;
+                servicesDescriptions[`notes_${srvId}`] = noteVal;
+            });
+
+            // Gather pricing items [4]
+            const isStorageSelected = selectedServices.includes('Storage');
+            let unitType = null;
+            let unitPrice = null;
+            let quantity = null;
+            let flatRate = null;
+            
+            if (isStorageSelected) {
+                unitType = document.getElementById('quote-unit-type').value;
+                unitPrice = Number(document.getElementById('quote-unit-price').value);
+                quantity = Number(document.getElementById('quote-qty').value);
+            } else {
+                flatRate = Number(document.getElementById('quote-flat-rate').value);
+            }
+
+            const basePrice = Number(document.getElementById('quote-base').value);
+            const vat = Number(document.getElementById('quote-vat').value);
+            const estimatedPrice = Number(document.getElementById('quote-grand').value);
+
+            // Scope exclusions
+            const serviceIncludes = document.getElementById('quote-includes').value;
+            const serviceExcludes = document.getElementById('quote-excludes').value;
+
+            const moveDateFrom = document.getElementById('quote-start-date').value;
+            const moveDateTo = document.getElementById('quote-end-date').value;
+            
+            const assignedSupervisor = document.getElementById('quote-supervisor').value || "None Assigned";
+            const assignedTruck = document.getElementById('quote-vehicle').value || "None Assigned";
+
+            const customerId = custSelect.value;
+            const customerName = custSelect.options[custSelect.selectedIndex].text;
+
+            // Multi-day tracker [4]
+            const orderId = `JAW-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+            const conditionalPayload = {};
+            // Gather conditional payload parameters dynamically based on selectedServices grid [4]
+            if (selectedServices.includes('Domestic Moving') || selectedServices.includes('Local Moving')) {
+                const srvId = selectedServices.includes('Domestic Moving') ? 'Domestic-Moving' : 'Local-Moving';
+                conditionalPayload.mv_origin = document.getElementById(`mv-origin-${srvId}`).value;
+                conditionalPayload.mv_dest = document.getElementById(`mv-dest-${srvId}`).value;
+                conditionalPayload.mv_origin_floor = document.getElementById(`mv-orig-floor-${srvId}`).value;
+                conditionalPayload.mv_dest_floor = document.getElementById(`mv-dest-floor-${srvId}`).value;
+                conditionalPayload.mv_double_handling = document.getElementById(`mv-double-handling-${srvId}`).checked;
+            } 
+            if (selectedServices.includes('Dry Distribution') || selectedServices.includes('Refer Transport')) {
+                const srvId = selectedServices.includes('Dry Distribution') ? 'Dry-Distribution' : 'Refer-Transport';
+                conditionalPayload.dist_route = document.getElementById(`dist-route-${srvId}`).value;
+            } 
+            if (isStorageSelected) {
+                const srvId = 'Storage';
+                conditionalPayload.stor_temp = document.getElementById(`stor-temp-${srvId}`).value;
+                conditionalPayload.stor_city = document.getElementById(`stor-city-${srvId}`).value;
+            } 
+            if (selectedServices.includes('Door to Door Export') || selectedServices.includes('Door to Door Import') || selectedServices.includes('Port to Door Import' || selectedServices.includes('Door to Port Export'))) {
+                let srvId = 'Door-to-Door-Export';
+                if (selectedServices.includes('Door to Door Import')) srvId = 'Door-to-Door-Import';
+                if (selectedServices.includes('Port to Door Import')) srvId = 'Port-to-Door-Import';
+                if (selectedServices.includes('Door to Port Export')) srvId = 'Door-to-Port-Export';
+                
+                conditionalPayload.db_orig = document.getElementById(`db-orig-${srvId}`).value;
+                conditionalPayload.db_dest = document.getElementById(`db-dest-${srvId}`).value;
+                conditionalPayload.db_floors = document.getElementById(`db-floors-${srvId}`).value;
+                conditionalPayload.db_crane = document.getElementById(`db-crane-${srvId}`).checked;
+                conditionalPayload.db_forklift = document.getElementById(`db-forklift-${srvId}`).checked;
+                conditionalPayload.db_boom = document.getElementById(`db-boom-${srvId}`).checked;
+                conditionalPayload.db_trailer = document.getElementById(`db-trailer-${srvId}`).checked;
+            } 
+            if (selectedServices.includes('Packing Services')) {
+                const srvId = 'Packing-Services';
+                conditionalPayload.pack_city = document.getElementById(`pack-city-${srvId}`).value;
+                conditionalPayload.pack_floor = document.getElementById(`pack-floor-${srvId}`).value;
+            } 
+            if (selectedServices.includes('Inventory')) {
+                const srvId = 'Inventory';
+                conditionalPayload.inv_city = document.getElementById(`inv-city-${srvId}`).value;
+                conditionalPayload.inv_data_status = document.getElementById(`inv-data-status-${srvId}`).value;
+                conditionalPayload.inv_barcode = document.getElementById(`inv-barcode-${srvId}`).checked;
+                conditionalPayload.inv_odoo = document.getElementById(`inv-odoo-${srvId}`).checked;
+                conditionalPayload.inv_gsheet = document.getElementById(`inv-gsheet-${srvId}`).checked;
+            }
+
+            try {
+                // Save quote profile, marked initial status as "Quot" [4]
+                await addDoc(collection(db, "quotes"), {
+                    orderId, customerId, customerName, goodsType, soc,
+                    selectedServices, servicesDescriptions,
+                    unitType, unitPrice, quantity, flatRate, basePrice, vat, estimatedPrice,
+                    serviceIncludes, serviceExcludes, moveDateFrom, moveDateTo,
+                    assignedSupervisor, assignedTruck, status: "Quot", ...conditionalPayload,
+                    createdAt: new Date().toISOString()
+                });
+
+                showToast(`Order Quote ${orderId} created successfully!`, "success");
+                document.getElementById('add-quote-form').reset();
+                document.getElementById('cust-search').value = "";
+                
+                // Refresh service lists
+                renderServicesGridCheckboxes();
+                handleServiceCheckboxToggle();
+
+                setTimeout(() => { switchView('quotes-directory-section'); }, 1000);
+            } catch (error) {
+                console.error("Quotes directory write exception:", error);
+                showToast("Failed to compile quote estimates.", "error");
+            }
+        }
+
+        // Add Vehicle form submit
+        window.handleVehicleFormSubmit = async function(event) {
+            event.preventDefault();
+            if (!db) return;
+
+            const submitBtn = document.getElementById('veh-submit-btn');
+            const truckId = document.getElementById('veh-truck-id').value.trim();
+            const liveCarKm = Number(document.getElementById('veh-live-km').value);
+            const oilKmLimit = Number(document.getElementById('veh-oil-limit').value);
+            const lastChangeOilKm = Number(document.getElementById('veh-last-oil').value);
+
+            submitBtn.disabled = true;
+
+            try {
+                await addDoc(collection(db, "vehicles"), {
+                    truckId, liveCarKm, oilKmLimit, lastChangeOilKm, status: "Available", createdAt: new Date().toISOString()
+                });
+                showToast("New vehicle registered successfully!", "success");
+                document.getElementById('add-vehicle-form').reset();
+                setTimeout(() => { switchView('fleet-ledger-section'); }, 1000);
+            } catch (error) {
+                console.error("Vehicle insertion error:", error);
+                showToast("Failed to save fleet assets.", "error");
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+        // Drivers Pre-Trip form submit [3]
+        window.handleDriverFormSubmit = async function(event) {
+            event.preventDefault();
+            if (!db) return;
+
+            const submitBtn = document.getElementById('driver-submit-btn');
+            const vehicleDocId = document.getElementById('driver-vehicle').value;
+            const subOrderId = document.getElementById('driver-suborder-id').value;
+            const odometer = Number(document.getElementById('driver-odometer').value);
+            const routeFrom = document.getElementById('driver-from').value.trim();
+            const routeTo = document.getElementById('driver-to').value.trim();
+            const tripStatus = document.getElementById('driver-trip-status').value;
+
+            const engineOil = document.getElementById('driver-engine-oil').value;
+            const oilNotes = document.getElementById('oilNotes').value.trim();
+            
+            const tires = document.getElementById('driver-tires').value;
+            const tireNotes = document.getElementById('tireNotes').value.trim();
+            
+            const windshield = document.getElementById('driver-windshield').value;
+            const windshieldNotes = document.getElementById('windshieldNotes').value.trim();
+            
+            const cargo = document.getElementById('driver-cargo').value;
+            const cargoNotes = document.getElementById('cargoNotes').value.trim();
+
+            const matchedVeh = window.allVehicles.find(v => v.id === vehicleDocId);
+            if (matchedVeh && odometer < Number(matchedVeh.liveCarKm)) {
+                showToast(`Checkup warning: Entered KM is lower than last logged odometer (${matchedVeh.liveCarKm} KM).`, "error");
+                return;
+            }
+
+            submitBtn.disabled = true;
+
+            try {
+                const vehicleRef = doc(db, "vehicles", vehicleDocId);
+                await updateDoc(vehicleRef, {
+                    liveCarKm: odometer,
+                    status: tripStatus
+                });
+
+                await addDoc(collection(db, "driver_logs"), {
+                    vehicleDocId,
+                    truckId: matchedVeh ? matchedVeh.truckId : "Unknown ID",
+                    subOrderId, odometer, routeFrom, routeTo, tripStatus,
+                    engineOil, oilNotes: engineOil === 'Other' ? oilNotes : "",
+                    tires, tireNotes: tires === 'Other' ? tireNotes : "",
+                    windshield, windshieldNotes: windshield === 'Other' ? windshieldNotes : "",
+                    cargo, cargoNotes: cargo === 'Other' ? cargoNotes : "",
+                    timestamp: new Date().toISOString()
+                });
+
+                showToast("Driver inspection checklist uploaded!", "success");
+                document.getElementById('driver-mobile-form').reset();
+                
+                document.getElementById('oilNotes-container').classList.add('hidden');
+                document.getElementById('tireNotes-container').classList.add('hidden');
+                document.getElementById('windshieldNotes-container').classList.add('hidden');
+                document.getElementById('cargoNotes-container').classList.add('hidden');
+
+            } catch (error) {
+                console.error("Inspection write error:", error);
+                showToast("Failed to compile pre-trip logs.", "error");
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+
+        /* OPERATIONAL DYNAMIC CALENDAR PLOTTING [6] */
+
+        function initCalendarInstance() {
+            const calendarEl = document.getElementById('calendar-container');
+            if (!calendarEl) return;
+
+            window.calendarInstance = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                themeSystem: 'standard',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek'
+                },
+                events: [],
+                eventClick: function(info) {
+                    displayCalendarEventDetails(info.event);
+                }
+            });
+            window.calendarInstance.render();
+        }
+
+        // Plots multi-day events continuously based on range [6]
+        function updateCalendarEvents(quotes) {
+            if (!window.calendarInstance) return;
+
+            // Trigger criteria: Plot ONLY if status is set to 'Process' [6]
+            const approvedQuotes = quotes.filter(q => q.status === 'Process');
+
+            const calendarEvents = approvedQuotes.map(quote => {
+                // To display spanning dates continuously, end date is exclusive [6]
+                let rawEndDate = new Date(quote.assignedDateTo || quote.moveDateTo);
+                rawEndDate.setDate(rawEndDate.getDate() + 1);
+                const calendarFormattedEndDate = rawEndDate.toISOString().split('T')[0];
+
+                return {
+                    id: quote.id,
+                    title: `${quote.orderId} - ${quote.customerName}`,
+                    start: quote.assignedDateFrom || quote.moveDateFrom,
+                    end: calendarFormattedEndDate, // Continuous multi-day spanning [6]
+                    backgroundColor: '#FF6600', // Plotting using Al-Jawaad Orange Brand Color
+                    extendedProps: { ...quote }
+                };
+            });
+
+            window.calendarInstance.removeAllEvents();
+            window.calendarInstance.addEventSource(calendarEvents);
+        }
+
+        // Show details when calendar events are clicked [6]
+        function displayCalendarEventDetails(event) {
+            const props = event.extendedProps;
+            document.getElementById('modal-order-id').textContent = `Order Profile: ${props.orderId}`;
+            document.getElementById('modal-cust-name').textContent = props.customerName;
+            document.getElementById('modal-service').textContent = (props.selectedServices || [props.serviceType]).join(', ');
+            document.getElementById('modal-timeline').textContent = `${props.assignedDateFrom || props.moveDateFrom} to ${props.assignedDateTo || props.moveDateTo}`;
+            document.getElementById('modal-price').textContent = `${(props.estimatedPrice || 0).toLocaleString()} SAR`;
+
+            document.getElementById('modal-supervisors').textContent = (props.assignedSupervisors || []).join(', ') || "None Assigned";
+            document.getElementById('modal-truck').textContent = props.assignedTruck || "None Assigned";
+            document.getElementById('modal-driver').textContent = props.assignedDriver || "None Assigned";
+            document.getElementById('modal-labor').textContent = (props.assignedLabor || []).join(', ') || "None Assigned";
+            document.getElementById('modal-op-notes').textContent = props.operationNotes || "No dispatch notes provided.";
+
+            const modal = document.getElementById('calendar-modal');
+            if (modal) modal.classList.remove('hidden');
+        }
+
+        window.closeCalendarModal = function() {
+            const modal = document.getElementById('calendar-modal');
+            if (modal) modal.classList.add('hidden');
+        }
+
+
+        /* MANAGE PERMISSIONS HELPERS */
+
+        async function loadPermissionsTable() {
+            const tableBody = document.getElementById('permissions-table-body');
+            if (!tableBody || !db) return;
+
+            tableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-8 text-center text-slate-400">Loading access parameters...</td></tr>`;
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "employees"));
+                tableBody.innerHTML = "";
+
+                const systemUsers = [];
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.accessLevel && data.accessLevel !== "") {
+                        systemUsers.push({ id: doc.id, ...data });
+                    }
+                });
+
+                if (systemUsers.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="3" class="px-6 py-8 text-center text-slate-500">No employees with system access accounts found.</td></tr>`;
+                    return;
+                }
+
+                const accessRoles = ["Super Admin", "Supervisor", "Warehouse", "Driver", "Sales", "CS", "Coordinator"];
+                const modules = [
+                    { id: "hr_module", label: "HR Module" },
+                    { id: "access_control", label: "Access Control" },
+                    { id: "fleet_drivers", label: "Fleet & Drivers" },
+                    { id: "warehouse_inventory", label: "Warehouse & Inventory" },
+                    { id: "clients_quotes", label: "Clients & Quotes" }
+                ];
+
+                systemUsers.forEach(user => {
+                    const currentAccessLevel = user.accessLevel;
+                    const allowedScreens = user.allowedScreens || [];
+                    
+                    let selectOptions = '';
+                    accessRoles.forEach(role => {
+                        const isSelected = (role === currentAccessLevel) ? 'selected' : '';
+                        selectOptions += `<option value="${role}" ${isSelected}>${role}</option>`;
+                    });
+
+                    let checkboxesHTML = '';
+                    modules.forEach(mod => {
+                        const isChecked = allowedScreens.includes(mod.id) ? 'checked' : '';
+                        checkboxesHTML += `
+                            <label class="inline-flex items-center text-xs text-slate-600 bg-slate-50 border border-slate-200 px-2 py-1 rounded cursor-pointer hover:bg-slate-100 transition-colors">
+                                <input type="checkbox" value="${mod.id}" ${isChecked} class="screen-checkbox-${user.id} rounded text-brand-500 focus:ring-brand-500/50 border-slate-300 mr-1.5 h-3.5 w-3.5">
+                                <span>${mod.label}</span>
+                            </label>
+                        `;
+                    });
+
+                    tableBody.insertAdjacentHTML('beforeend', `
+                        <tr class="hover:bg-slate-50 border-b border-slate-200 transition-all" id="permission-row-${user.id}">
+                            <td class="px-6 py-4 font-semibold text-slate-900">${escapeHTML(user.fullName)}</td>
+                            <td class="px-6 py-4">
+                                <span id="badge-${user.id}" class="px-2.5 py-1 text-xs font-bold rounded-lg ${getAccessBadgeClass(currentAccessLevel)}">${escapeHTML(currentAccessLevel)}</span>
+                            </td>
+                            <td class="px-6 py-4 space-y-3">
+                                <div class="flex items-center space-x-3">
+                                    <select id="select-access-level-${user.id}" class="px-3 py-1.5 border border-slate-200 rounded-lg text-xs bg-white text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-500/50">
+                                        ${selectOptions}
+                                    </select>
+                                    <button onclick="updateEmployeeAccess('${user.id}')" id="btn-update-${user.id}" class="px-3 py-1.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-semibold rounded-lg transition-colors flex items-center shadow-sm">
+                                        Update Permission
+                                    </button>
+                                </div>
+                                <div class="flex flex-wrap gap-2 pt-1">
+                                    ${checkboxesHTML}
+                                </div>
+                            </td>
+                        </tr>
+                    `);
+                });
+            } catch (error) {
+                console.error("Error reading credentials list:", error);
+            }
+        }
+
+        window.updateEmployeeAccess = async function(docId) {
+            if (!db) return;
+            const selectEl = document.getElementById(`select-access-level-${docId}`);
+            const updateBtn = document.getElementById(`btn-update-${docId}`);
+            const badgeEl = document.getElementById(`badge-${docId}`);
+            if (!selectEl || !updateBtn) return;
+
+            const newAccessLevel = selectEl.value;
+            const checkboxElements = document.querySelectorAll(`.screen-checkbox-${docId}`);
+            const allowedScreens = [];
+            checkboxElements.forEach(cb => {
+                if (cb.checked) allowedScreens.push(cb.value);
+            });
+
+            updateBtn.disabled = true;
+
+            try {
+                await updateDoc(doc(db, "employees", docId), {
+                    accessLevel: newAccessLevel,
+                    allowedScreens: allowedScreens
+                });
+                badgeEl.textContent = newAccessLevel;
+                badgeEl.className = `px-2.5 py-1 text-xs font-bold rounded-lg ${getAccessBadgeClass(newAccessLevel)}`;
+                showToast("System permissions updated successfully!", "success");
+            } catch (error) {
+                console.error("Error executing system permissions update:", error);
+                showToast("Failed to execute updates.", "error");
+            } finally {
+                updateBtn.disabled = false;
+            }
+        }
+
+
+        /* COMMON STANDARDS HELPERS */
+
+        function showToast(message, type = "success") {
+            const toast = document.getElementById('toast');
+            const toastContent = document.getElementById('toast-content');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.textContent = message;
+
+            if (type === "success") {
+                toastContent.className = "flex items-center p-4 space-x-3 text-white rounded-lg shadow-lg bg-emerald-600";
+            } else {
+                toastContent.className = "flex items-center p-4 space-x-3 text-white rounded-lg shadow-lg bg-rose-600";
+            }
+
+            toast.classList.remove('opacity-0', 'pointer-events-none', 'translate-x-full');
+            toast.classList.add('opacity-100', 'translate-x-0');
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none', 'translate-x-full');
+                toast.classList.remove('opacity-100', 'translate-x-0');
+            }, 4000);
+        }
+
+        function getAccessBadgeClass(access) {
+            switch(access) {
+                case 'Super Admin': return 'bg-red-50 text-red-700 border border-red-200';
+                case 'Supervisor': return 'bg-orange-50 text-orange-700 border border-orange-200';
+                case 'Warehouse': return 'bg-amber-50 text-amber-700 border border-amber-200';
+                case 'Driver': return 'bg-blue-50 text-blue-700 border border-blue-200';
+                case 'Sales': return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+                case 'CS': return 'bg-purple-50 text-purple-700 border border-purple-200';
+                case 'Coordinator': return 'bg-pink-50 text-pink-700 border border-pink-200';
+                default: return 'bg-slate-100 text-slate-700 border border-slate-200';
+            }
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
+        // App Initialisation sequence
+        document.addEventListener('DOMContentLoaded', () => {
+            initCalendarInstance();
+            renderServicesGridCheckboxes();
+            handleServiceCheckboxToggle();
+            subscribeToDatabaseStreams();
+        });
+    </script>
+</body>
+</html>
