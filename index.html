@@ -1,10 +1,10 @@
-
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Al-Jawaad Logistics ERP - Admin & Operations Portal</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aljawad Moving & Logistics ERP - Enterprise OS</title>
+    
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -24,14 +24,22 @@
             }
         }
     </script>
+    
     <!-- Google Fonts (Inter) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
     <!-- FullCalendar CDN for CRM Scheduling Grid -->
     <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    
+    <!-- EmailJS CDN Library -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
+        
         /* Custom FullCalendar light theme overrides */
         .fc {
             --fc-border-color: #e2e8f0;
@@ -53,6 +61,51 @@
             font-weight: 500;
             border: none !important;
         }
+        
+        /* Accordion transition utility */
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, opacity 0.2s ease-out;
+            opacity: 0;
+        }
+        .accordion-content.open {
+            max-height: 800px;
+            opacity: 1;
+        }
+
+        /* Dedicated print rules */
+        @media print {
+            body {
+                background-color: #FFFFFF !important;
+                color: #000000 !important;
+            }
+            aside, header, form, button, select, input, .no-print {
+                display: none !important;
+            }
+            main {
+                max-width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .print-full-width {
+                width: 100% !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+            .print-visible {
+                display: block !important;
+            }
+            table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+            }
+            th, td {
+                border: 1px solid #E2E8F0 !important;
+                padding: 8px !important;
+                font-size: 10px !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
@@ -64,8 +117,36 @@
         </div>
     </div>
 
-    <!-- Calendar Detail Modal/Tooltip [6] -->
-    <div id="calendar-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 hidden">
+    <!-- ADMIN SIGN-IN GATEWAY MODAL (Mohamed.jawadmove@gmail.com / Aljawad@2026) -->
+    <div id="admin-login-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 hidden no-print">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 space-y-6">
+            <div class="text-center">
+                <span class="text-2xl font-black text-brand-500 tracking-tight block">ALJAWAD BACK-OFFICE</span>
+                <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Authorized Administrative Access Only</p>
+            </div>
+            <form id="admin-login-form" class="space-y-4" onsubmit="handleAdminLogin(event)">
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">System Email</label>
+                    <input type="email" id="login-email" required placeholder="name@aljawad.sa" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-slate-800">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Security Password</label>
+                    <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-slate-800">
+                </div>
+                <button type="submit" class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-brand-500/15">
+                    Verify & Authenticate
+                </button>
+            </form>
+            <div class="text-center">
+                <button onclick="bypassToDriverPortal()" class="text-xs font-bold text-brand-500 hover:underline">
+                    Access Field Driver/Staff Portal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calendar Detail Modal/Tooltip -->
+    <div id="calendar-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 hidden no-print">
         <div class="bg-white border border-slate-200 rounded-xl shadow-2xl p-6 max-w-lg w-full mx-4 space-y-4">
             <div class="flex justify-between items-center border-b border-slate-100 pb-3">
                 <h3 id="modal-order-id" class="text-lg font-bold text-brand-500">Order Profile</h3>
@@ -100,117 +181,131 @@
     <!-- Main Workspace Container -->
     <div class="flex flex-1 min-h-screen overflow-hidden">
 
-        <!-- Sidebar Navigation (Orange Highlights) [1] -->
-        <aside id="app-sidebar" class="w-64 bg-white border-r border-slate-200 text-slate-800 flex flex-col flex-shrink-0">
-            <!-- Brand Header -->
+        <!-- COLLAPSIBLE ACCORDION SIDEBAR NAVIGATION [1] -->
+        <aside id="app-sidebar" class="w-64 bg-white border-r border-slate-200 text-slate-800 flex flex-col flex-shrink-0 no-print">
             <div class="p-6 border-b border-slate-200 flex items-center justify-between">
                 <div>
                     <span class="text-xl font-black tracking-wider text-brand-500 block">AL-JAWAAD</span>
-                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest block font-mono">Logistics ERP</span>
+                    <span class="text-[10px] text-slate-400 font-bold uppercase tracking-widest block font-mono">Logistics OS</span>
                 </div>
-                <span class="text-[10px] bg-brand-100 text-brand-600 px-2.5 py-1 rounded-full font-bold">v1.5</span>
+                <span class="text-[10px] bg-brand-100 text-brand-600 px-2.5 py-1 rounded-full font-bold">v2.5</span>
             </div>
 
-            <!-- Navigation Links -->
-            <nav class="flex-1 px-4 py-6 space-y-6 overflow-y-auto">
-                <!-- HR Module Section -->
-                <div id="sidebar-hr-section">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">HR Module</p>
-                    <ul class="space-y-1.5">
-                        <li>
-                            <button id="btn-add-employee" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('add-employee-section')">
-                                Add Employee
-                            </button>
-                        </li>
-                        <li>
-                            <button id="btn-view-employees" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('view-employees-section')">
-                                Employee Directory
-                            </button>
-                        </li>
-                    </ul>
+            <!-- Accordion-style Navigation Links -->
+            <nav class="flex-1 px-4 py-6 space-y-3 overflow-y-auto">
+                
+                <!-- 1. [Dashboard Hub] -->
+                <div class="space-y-1">
+                    <button onclick="toggleAccordion('acc-dash')" class="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider hover:bg-slate-50 rounded-lg">
+                        <span>📊 Dashboard Hub</span>
+                        <span id="arrow-acc-dash" class="transform transition-transform">&#9662;</span>
+                    </button>
+                    <div id="acc-dash" class="accordion-content space-y-1 pl-4">
+                        <button id="btn-dashboard-metrics" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('dashboard-metrics-section')">
+                            Dashboard Metrics
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Access Control Section -->
-                <div id="sidebar-access-section">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Access Control</p>
-                    <ul class="space-y-1.5">
-                        <li>
-                            <button id="btn-manage-permissions" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('manage-permissions-section')">
-                                Manage Permissions
-                            </button>
-                        </li>
-                    </ul>
+                <!-- 2. [CRM & Leads Portal] -->
+                <div class="space-y-1">
+                    <button onclick="toggleAccordion('acc-crm')" class="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider hover:bg-slate-50 rounded-lg">
+                        <span>💼 CRM & Leads Portal</span>
+                        <span id="arrow-acc-crm" class="transform transition-transform">&#9662;</span>
+                    </button>
+                    <div id="acc-crm" class="accordion-content space-y-1 pl-4 animate-nav">
+                        <button id="btn-add-customer" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('add-customer-section')">
+                            Leads Management
+                        </button>
+                        <button id="btn-create-quote" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('create-quote-section')">
+                            Quotes & Estimator
+                        </button>
+                        <button id="btn-quotes-directory" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('quotes-directory-section')">
+                            Quotes Directory
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Fleet Management Section -->
-                <div>
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Fleet Management</p>
-                    <ul class="space-y-1.5">
-                        <li>
-                            <button id="btn-driver-mobile" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('driver-mobile-section')">
-                                Drivers Mobile Form
-                            </button>
-                        </li>
-                        <li id="sidebar-add-vehicle-link">
-                            <button id="btn-add-vehicle" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('add-vehicle-section')">
-                                Add New Vehicle
-                            </button>
-                        </li>
-                        <li id="sidebar-fleet-ledger-link">
-                            <button id="btn-fleet-ledger" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('fleet-ledger-section')">
-                                Fleet Ledger
-                            </button>
-                        </li>
-                    </ul>
+                <!-- 3. [Operations & Fleet Control] -->
+                <div class="space-y-1">
+                    <button onclick="toggleAccordion('acc-ops')" class="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider hover:bg-slate-50 rounded-lg">
+                        <span>🚛 Operations & Fleet</span>
+                        <span id="arrow-acc-ops" class="transform transition-transform">&#9662;</span>
+                    </button>
+                    <div id="acc-ops" class="accordion-content space-y-1 pl-4">
+                        <button id="btn-order-tracker" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('order-tracker-section')">
+                            Operation Workflow
+                        </button>
+                        <button id="btn-operational-calendar" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('operational-calendar-section')">
+                            Operational Calendar
+                        </button>
+                        <button id="btn-add-vehicle" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('add-vehicle-section')">
+                            Vehicle Registry
+                        </button>
+                        <button id="btn-fleet-ledger" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('fleet-ledger-section')">
+                            Fleet Ledger
+                        </button>
+                        <button id="btn-drivers-logs" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('drivers-logs-section')">
+                            Driver Logs Review
+                        </button>
+                    </div>
                 </div>
 
-                <!-- CRM Section -->
-                <div id="sidebar-crm-section">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">CRM System</p>
-                    <ul class="space-y-1.5">
-                        <li>
-                            <button id="btn-add-customer" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('add-customer-section')">
-                                Add Customer
-                            </button>
-                        </li>
-                        <li>
-                            <button id="btn-create-quote" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('create-quote-section')">
-                                Create Quote
-                            </button>
-                        </li>
-                        <li>
-                            <button id="btn-quotes-directory" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('quotes-directory-section')">
-                                Quotes Directory
-                            </button>
-                        </li>
-                    </ul>
+                <!-- 4. [HR Governance Module] -->
+                <div class="space-y-1">
+                    <button onclick="toggleAccordion('acc-hr')" class="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider hover:bg-slate-50 rounded-lg">
+                        <span>👥 HR Governance Module</span>
+                        <span id="arrow-acc-hr" class="transform transition-transform">&#9662;</span>
+                    </button>
+                    <div id="acc-hr" class="accordion-content space-y-1 pl-4">
+                        <button id="btn-add-employee" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('add-employee-section')">
+                            Staff Directory CRUD
+                        </button>
+                        <button id="btn-view-employees" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('view-employees-section')">
+                            Employee Grid
+                        </button>
+                        <button id="btn-hr-analytics" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('hr-analytics-section')">
+                            HR Analytics Reports
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Operations Section [1] -->
-                <div id="sidebar-operations-section">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Operations</p>
-                    <ul class="space-y-1.5">
-                        <li>
-                            <button id="btn-drivers-logs" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('drivers-logs-section')">
-                                Drivers Logs Records
-                            </button>
-                        </li>
-                        <li>
-                            <button id="btn-order-tracker" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('order-tracker-section')">
-                                Order Status Tracker
-                            </button>
-                        </li>
-                        <li>
-                            <button id="btn-operational-calendar" class="w-full flex items-center px-4 py-2.5 text-xs font-semibold text-slate-600 rounded-lg transition-all hover:bg-slate-100" onclick="switchView('operational-calendar-section')">
-                                Operational Calendar
-                            </button>
-                        </li>
-                    </ul>
+                <!-- 5. [Warehouse & Inventory] -->
+                <div class="space-y-1">
+                    <button onclick="toggleAccordion('acc-wh')" class="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider hover:bg-slate-50 rounded-lg">
+                        <span>📦 Warehouse & Inventory</span>
+                        <span id="arrow-acc-wh" class="transform transition-transform">&#9662;</span>
+                    </button>
+                    <div id="acc-wh" class="accordion-content space-y-1 pl-4">
+                        <button id="btn-materials-manager" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('materials-manager-section')">
+                            Materials Manager
+                        </button>
+                    </div>
                 </div>
+
+                <!-- 6. [Governance Settings] (NEW) -->
+                <div class="space-y-1">
+                    <button onclick="toggleAccordion('acc-gov')" class="w-full flex items-center justify-between px-3 py-2 text-xs font-bold text-slate-500 uppercase tracking-wider hover:bg-slate-50 rounded-lg">
+                        <span>🔒 Governance Settings</span>
+                        <span id="arrow-acc-gov" class="transform transition-transform">&#9662;</span>
+                    </button>
+                    <div id="acc-gov" class="accordion-content space-y-1 pl-4">
+                        <button id="btn-governance" class="w-full text-left px-3 py-2 text-xs font-semibold text-slate-600 rounded-lg hover:bg-slate-100" onclick="switchView('governance-settings-section')">
+                            System Permissions Matrix
+                        </button>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100">
+                    <button id="btn-driver-mobile" class="w-full flex items-center px-4 py-2.5 text-xs font-bold text-slate-700 bg-orange-50/50 hover:bg-orange-50 rounded-lg border border-orange-100" onclick="switchView('driver-mobile-section')">
+                        📲 Drivers Mobile Form
+                    </button>
+                </div>
+
             </nav>
 
             <div class="p-4 border-t border-slate-200 text-[10px] text-slate-400 text-center font-mono">
-                Al-Jawaad Logistics Co.
+                Aljawad Moving & Logistics Co.
             </div>
         </aside>
 
@@ -218,63 +313,138 @@
         <main class="flex-1 flex flex-col overflow-y-auto">
             
             <!-- Global Header -->
-            <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between">
-                <h1 id="page-title" class="text-lg font-bold text-slate-800">Add Employee</h1>
+            <header class="bg-white border-b border-slate-200 px-8 py-4 flex items-center justify-between no-print">
+                <h1 id="page-title" class="text-lg font-bold text-slate-800">Operational Hub</h1>
                 <div class="flex items-center space-x-6">
-                    <!-- Session Role Simulator -->
+                    <!-- Session Role Simulator / Impersonator [1] -->
                     <div class="flex items-center space-x-2">
-                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Session Role:</span>
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Impersonate Role:</span>
                         <select id="session-role" onchange="changeSessionRole(this.value)" class="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold focus:outline-none focus:ring-2 focus:ring-brand-500/20 bg-white text-slate-800">
-                            <option value="Admin" selected>Admin / Super Admin</option>
-                            <option value="Driver">Driver Portal Only</option>
+                            <option value="Admin" selected>Super Admin</option>
+                            <option value="Operation Manager">Operation Manager</option>
+                            <option value="Sales">Sales</option>
+                            <option value="CS">CS</option>
+                            <option value="Supervisor">Supervisor</option>
+                            <option value="Driver">Driver</option>
+                            <option value="Labor">Labor</option>
                         </select>
                     </div>
                     <div class="h-8 w-px bg-slate-200"></div>
                     <div class="flex items-center space-x-4">
                         <span id="header-user-badge" class="text-sm text-slate-500 font-medium">Welcome, Admin</span>
-                        <div class="w-8 h-8 rounded-full bg-brand-500 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-brand-500/20">ERP</div>
+                        <button onclick="triggerSignOut()" class="text-xs font-bold text-red-500 hover:text-red-700">Log Out</button>
                     </div>
                 </div>
             </header>
 
             <!-- Application Views -->
-            <div class="p-8 max-w-7xl w-full mx-auto">
+            <div class="p-8 max-w-7xl w-full mx-auto flex-1">
 
-                <!-- HR VIEW 1: Add New Employee (Credentials Optional) [2] -->
-                <section id="add-employee-section" class="max-w-3xl mx-auto space-y-6">
-                    <div class="bg-white border border-slate-200 rounded-xl p-8 space-y-6 shadow-sm">
-                        <div>
-                            <h2 class="text-xl font-bold text-slate-900">Register New Staff Profile</h2>
-                            <p class="text-xs text-slate-500 mt-1">Credentials and account access setups are optional [2].</p>
+                <!-- DASHBOARD HUB: Metrics Section -->
+                <section id="dashboard-metrics-section" class="space-y-6">
+                    <div class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white p-6 sm:p-8 rounded-2xl relative overflow-hidden shadow-lg">
+                        <div class="relative z-10 space-y-2">
+                            <span class="bg-brand-500 text-white text-[10px] font-black uppercase px-2.5 py-1 rounded-full tracking-wider">Corporate Command Console</span>
+                            <h2 class="text-2xl font-black tracking-tight pt-2">Aljawad Systems Command</h2>
+                            <p class="text-xs text-slate-400 max-w-xl">Central dashboard syncing active personnel records, operations scheduling calendars, and logistics fleet performance ledgers.</p>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Connected Fleet</span>
+                            <span id="dash-fleet-count" class="text-xl font-black text-slate-900">0 Assets</span>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Active Headcount</span>
+                            <span id="dash-active-headcount" class="text-xl font-black text-slate-900">0 Staff</span>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Overdue Oil Swaps</span>
+                            <span id="dash-overdue-count" class="text-xl font-black text-red-600">0 Flags</span>
+                        </div>
+                        <div class="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">Log Submissions</span>
+                            <span id="dash-logs-count" class="text-xl font-black text-slate-900">0 Entries</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- HR VIEW 1: Staff Directory CRUD (Direct Firestore Connect) [2] -->
+                <section id="add-employee-section" class="max-w-4xl mx-auto space-y-6 hidden">
+                    <div class="bg-white border border-slate-200 rounded-xl p-8 space-y-6 shadow-sm edit-gate">
+                        <div class="flex justify-between items-center border-b border-slate-100 pb-3">
+                            <div>
+                                <h2 id="hr-form-title" class="text-xl font-bold text-slate-900">Register Staff Directory Profile</h2>
+                                <p class="text-xs text-slate-500 mt-1">Populate HR profiles, dates, and access level credentials [2].</p>
+                            </div>
+                            <span id="edit-indicator" class="hidden text-xs bg-orange-100 text-brand-600 font-bold px-3 py-1 rounded-full animate-pulse">Edit Mode</span>
                         </div>
 
-                        <form id="add-employee-form" class="space-y-6" onsubmit="handleFormSubmit(event)">
+                        <form id="add-employee-form" class="space-y-6" onsubmit="handleEmployeeFormSubmit(event)">
+                            <input type="hidden" id="emp-doc-id" value="">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div class="space-y-1.5">
                                     <label class="block text-xs font-semibold text-slate-700">Full Name <span class="text-red-500">*</span></label>
                                     <input type="text" id="emp-fullname" required placeholder="John Doe" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
                                 </div>
                                 <div class="space-y-1.5">
-                                    <label class="block text-xs font-semibold text-slate-700">National ID <span class="text-red-500">*</span></label>
+                                    <label class="block text-xs font-semibold text-slate-700">National ID / Iqama <span class="text-red-500">*</span></label>
                                     <input type="text" id="emp-national-id" required placeholder="e.g. 10xxxxxxxx" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
                                 </div>
                                 <div class="space-y-1.5">
                                     <label class="block text-xs font-semibold text-slate-700">Job Title <span class="text-red-500">*</span></label>
                                     <select id="emp-jobtitle" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
                                         <option value="" disabled selected hidden>Choose Job Title...</option>
-                                        <option value="Sales">Sales</option>
-                                        <option value="CS">CS (Customer Service)</option>
-                                        <option value="Supervisor">Supervisor</option>
                                         <option value="Driver">Driver</option>
-                                        <option value="Warehouse Staff">Warehouse Staff</option>
-                                        <option value="Accountant">Accountant</option>
-                                        <option value="Operations Manager">Operations Manager</option>
-                                        <option value="Labor">Labor</option> <!-- Labor Option [2] -->
+                                        <option value="Supervisor">Supervisor</option>
+                                        <option value="Labor">Labor</option>
+                                        <option value="Sales">Sales</option>
+                                        <option value="CS">CS</option>
+                                        <option value="Operation Manager">Operation Manager</option>
                                     </select>
                                 </div>
                                 <div class="space-y-1.5">
                                     <label class="block text-xs font-semibold text-slate-700">Phone Number <span class="text-red-500">*</span></label>
                                     <input type="text" id="emp-phone" required placeholder="e.g. +9665XXXXXXXX" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+
+                                <!-- HR Expansion Fields [2] -->
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Nationality <span class="text-red-500">*</span></label>
+                                    <input type="text" id="emp-nationality" required placeholder="e.g. Saudi Arabian" class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Resource Type <span class="text-red-500">*</span></label>
+                                    <select id="emp-type" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                        <option value="Aljawad" selected>Aljawad Staff</option>
+                                        <option value="Outsource">Outsource Contract</option>
+                                    </select>
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Day Join Aljawad <span class="text-red-500">*</span></label>
+                                    <input type="date" id="emp-join-date" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors text-slate-800">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Date of Birth <span class="text-red-500">*</span></label>
+                                    <input type="date" id="emp-dob" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors text-slate-800">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Work Status <span class="text-red-500">*</span></label>
+                                    <select id="emp-status" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors">
+                                        <option value="Work" selected>Active Duty (Work)</option>
+                                        <option value="Left">Resigned (Left)</option>
+                                    </select>
+                                </div>
+
+                                <!-- IQAMA Expiry & Contract Expiry Parameters [2] -->
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">IQAMA Expiry Date <span class="text-red-500">*</span></label>
+                                    <input type="date" id="emp-iqama-exp" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors text-slate-800">
+                                </div>
+                                <div class="space-y-1.5">
+                                    <label class="block text-xs font-semibold text-slate-700">Contract Expiry Date <span class="text-red-500">*</span></label>
+                                    <input type="date" id="emp-contract-exp" required class="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 transition-colors text-slate-800">
                                 </div>
 
                                 <div class="space-y-1.5 border-t border-dashed border-slate-200 pt-4 md:col-span-2">
@@ -288,7 +458,7 @@
                                         <option value="Super Admin">Super Admin</option>
                                         <option value="Supervisor">Supervisor</option>
                                         <option value="Warehouse">Warehouse</option>
-                                        <option value="Driver">Driver</option>
+                                        <option value="Driver">Driver Portal</option>
                                         <option value="Sales">Sales</option>
                                         <option value="CS">CS</option>
                                         <option value="Coordinator">Coordinator</option>
@@ -305,7 +475,7 @@
                             </div>
 
                             <div class="flex justify-end space-x-3 pt-4 border-t border-slate-200">
-                                <button type="button" onclick="switchView('view-employees-section')" class="px-6 py-2.5 border border-slate-200 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors">Cancel</button>
+                                <button type="button" onclick="cancelHREdit()" class="px-6 py-2.5 border border-slate-200 text-slate-500 rounded-lg text-xs font-bold hover:bg-slate-100 transition-colors">Clear Form</button>
                                 <button type="submit" id="submit-btn" class="px-6 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold transition-colors flex items-center shadow-lg shadow-brand-500/10">
                                     <span id="btn-text">Save Employee</span>
                                 </button>
@@ -314,11 +484,11 @@
                     </div>
                 </section>
 
-                <!-- HR VIEW 2: Employee Directory -->
+                <!-- HR VIEW 2: Employee directory layout with inline updates [2] -->
                 <section id="view-employees-section" class="hidden space-y-6">
                     <div>
-                        <h2 class="text-lg font-semibold text-slate-900">Registered Employees</h2>
-                        <p class="text-xs text-slate-500 mt-1">Complete registered workforce directory.</p>
+                        <h2 class="text-lg font-semibold text-slate-900">Roster & Personnel Directory</h2>
+                        <p class="text-xs text-slate-500 mt-1">Complete register listing all staff metadata criteria with direct update benches [2].</p>
                     </div>
 
                     <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
@@ -326,188 +496,179 @@
                             <table class="w-full text-left border-collapse">
                                 <thead class="bg-slate-50 border-b border-slate-200">
                                     <tr>
-                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Full Name</th>
-                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">National ID</th>
-                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Job Title</th>
-                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Phone Number</th>
-                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Access Level</th>
-                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500">Username</th>
+                                        <th class="px-4 py-3.5 text-xs font-semibold text-slate-500">Name</th>
+                                        <th class="px-4 py-3.5 text-xs font-semibold text-slate-500">Job Title</th>
+                                        <th class="px-4 py-3.5 text-xs font-semibold text-slate-500">Nationality</th>
+                                        <th class="px-4 py-3.5 text-xs font-semibold text-slate-500">Type</th>
+                                        <th class="px-4 py-3.5 text-xs font-semibold text-slate-500 font-mono">Join Date</th>
+                                        <th class="px-4 py-3.5 text-xs font-semibold text-slate-500">IQAMA Remain</th>
+                                        <th class="px-4 py-3.5 text-xs font-semibold text-slate-500">Contract Remain</th>
+                                        <th class="px-4 py-3.5 text-xs font-semibold text-slate-500">Status</th>
+                                        <th class="px-4 py-3.5 text-xs font-semibold text-slate-500 text-center edit-gate">Action Bench</th>
                                     </tr>
                                 </thead>
-                                <tbody id="employees-table-body" class="divide-y divide-slate-200 text-sm">
-                                    <tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">Loading directory...</td></tr>
+                                <tbody id="employees-table-body" class="divide-y divide-slate-200 text-xs">
+                                    <tr><td colspan="9" class="px-6 py-8 text-center text-slate-400">Syncing directory indexes...</td></tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </section>
 
-                <!-- ACCESS CONTROL VIEW -->
-                <section id="manage-permissions-section" class="hidden space-y-6">
+                <!-- HR VIEW 3: Re-Engineered Governance Reports Dashboard [2] -->
+                <section id="hr-analytics-section" class="hidden space-y-6">
+                    <div class="flex justify-between items-center border-b border-slate-200 pb-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-slate-900">Governance Analytics & Reports</h2>
+                            <p class="text-xs text-slate-500 mt-1">Aggregates statistical parameters from active roster datasets [2].</p>
+                        </div>
+                        <button onclick="window.print()" class="px-4 py-2 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-lg text-xs shadow-md shadow-brand-500/10">
+                            🖨️ Export HR Ledger
+                        </button>
+                    </div>
+
+                    <!-- Metrics Cards Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-2">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Active Headcount</span>
+                            <span id="metric-active-count" class="text-3xl font-black text-slate-900 block">0 Staff</span>
+                            <span class="text-[10px] text-emerald-600 font-bold block">Status: "Work"</span>
+                        </div>
+                        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-2">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Company Resource Ratio</span>
+                            <div class="text-sm font-semibold text-slate-800 space-y-1">
+                                <div>Aljawad Staff: <span id="metric-ratio-internal" class="font-bold text-brand-500">0</span></div>
+                                <div>Outsourced Contract: <span id="metric-ratio-outsource" class="font-bold text-slate-500">0</span></div>
+							</div>
+                        </div>
+                        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-2">
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Attrition Ledger</span>
+                            <span id="metric-left-count" class="text-3xl font-black text-slate-400 block">0 Staff</span>
+                            <span class="text-[10px] text-red-500 font-bold block">Status: "Left"</span>
+                        </div>
+                    </div>
+
+                    <!-- Re-engineered Visual Indicators & Charts [2] -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        
+                        <!-- Nationality Distribution -->
+                        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4">
+                            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Nationality Distribution</h3>
+                            <div id="nationality-indicators" class="space-y-3">
+                                <!-- Dynamic progress bars -->
+                            </div>
+                        </div>
+
+                        <!-- Job Title Headcount Breaks -->
+                        <div class="bg-white border border-slate-200 p-6 rounded-xl shadow-sm space-y-4">
+                            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Job Designation Breaks</h3>
+                            <div id="designation-indicators" class="space-y-3">
+                                <!-- Dynamic progress bars -->
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- GOVERNANCE SETTINGS VIEW: Credentials overrides and Role-permission matrix -->
+                <section id="governance-settings-section" class="hidden space-y-6">
+                    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm space-y-6">
+                        <div class="border-b pb-3">
+                            <h2 class="text-lg font-bold text-slate-900">Governance Settings & Override</h2>
+                            <p class="text-xs text-slate-500 mt-1">Manage core back-office credentials and preview the job title authority matrix.</p>
+                        </div>
+
+                        <!-- Credentials Override Form [1] -->
+                        <form id="admin-credentials-form" onsubmit="saveAdminCredentials(event)" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="space-y-1">
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase">Master Admin Email / Username</label>
+                                <input type="email" id="gov-admin-email" required placeholder="Mohamed.jawadmove@gmail.com" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs">
+                            </div>
+                            <div class="space-y-1">
+                                <label class="block text-[10px] font-bold text-slate-400 uppercase">Master Admin Password</label>
+                                <input type="text" id="gov-admin-password" required placeholder="Aljawad@2026" class="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs">
+                            </div>
+                            <div class="flex items-end">
+                                <button type="submit" class="w-full py-2 bg-brand-500 hover:bg-brand-600 text-white font-bold text-xs rounded-lg transition-colors">
+                                    Update Credentials
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Static Roles Matrix Display for Reference [1] -->
+                        <div class="pt-6 border-t">
+                            <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-3">Hardcoded Role Permission Boundary Table</h3>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full text-left border text-xs">
+                                    <thead class="bg-slate-50 font-bold uppercase text-slate-500">
+                                        <tr>
+                                            <th class="p-3 border">Job Title / Role</th>
+                                            <th class="p-3 border">Allowed Matrix Category</th>
+                                            <th class="p-3 border">Access Limit Authority</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y text-slate-600">
+                                        <tr>
+                                            <td class="p-3 border font-semibold">Driver</td>
+                                            <td class="p-3 border">Fleet & Drivers Logs</td>
+                                            <td class="p-3 border text-brand-500 font-bold">Can View Only</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3 border font-semibold">Supervisor</td>
+                                            <td class="p-3 border">Operations, Fleet, Calendars</td>
+                                            <td class="p-3 border text-emerald-600 font-bold">Can Edit</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3 border font-semibold">Labor</td>
+                                            <td class="p-3 border">Warehouse & Inventory Only</td>
+                                            <td class="p-3 border text-brand-500 font-bold">Can View Only</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3 border font-semibold">Sales / CS</td>
+                                            <td class="p-3 border">CRM, Quotes, Customers</td>
+                                            <td class="p-3 border text-emerald-600 font-bold">Can Edit</td>
+                                        </tr>
+                                        <tr>
+                                            <td class="p-3 border font-semibold">Operation Manager / Admin</td>
+                                            <td class="p-3 border">All Modules (HR, Settings, Fleet, CRM, Ops)</td>
+                                            <td class="p-3 border text-emerald-600 font-bold">Can Edit</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- WAREHOUSE VIEW: Materials manager framework -->
+                <section id="materials-manager-section" class="hidden space-y-6">
                     <div>
-                        <h2 class="text-lg font-semibold text-slate-900">Access Matrix Controls</h2>
-                        <p class="text-xs text-slate-500 mt-1">Assign system permissions explicitly to accounts possessing credentials.</p>
+                        <h2 class="text-lg font-semibold text-slate-900">Materials & Consumables Manager</h2>
+                        <p class="text-xs text-slate-500 mt-1">Configure carton inventory limits and operational warehouse stocks.</p>
                     </div>
 
-                    <div class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead class="bg-slate-50 border-b border-slate-200">
-                                    <tr>
-                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500 w-1/4">Name</th>
-                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500 w-1/4">Access Role</th>
-                                        <th class="px-6 py-4 text-xs font-semibold text-slate-500 w-2/4">Feature Authorization Matrix</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="permissions-table-body" class="divide-y divide-slate-200 text-sm">
-                                    <tr><td colspan="3" class="px-6 py-8 text-center text-slate-400">Loading authorization indexes...</td></tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- FLEET VIEW 1: Drivers Mobile Form (Inspection [3]) -->
-                <section id="driver-mobile-section" class="hidden py-4">
-                    <div class="max-w-[420px] mx-auto bg-slate-900 border border-slate-800 rounded-[3rem] p-4 shadow-2xl relative">
-                        <div class="flex justify-between items-center px-6 pt-2 pb-4 text-slate-400 text-xs font-mono">
-                            <span>09:41</span>
-                            <div class="w-24 h-4 bg-slate-950 rounded-full mx-auto"></div>
-                            <div class="flex space-x-1">
-                                <span>5G</span>
-                                <div class="w-4 h-2.5 bg-brand-500 rounded-sm"></div>
+                    <div class="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Small Boxes (Standard)</span>
+                                <span class="text-xl font-bold text-slate-900 block">450 Units</span>
                             </div>
-                        </div>
-
-                        <!-- Mobile Screen Area -->
-                        <div class="bg-white rounded-[2rem] p-5 text-slate-800 min-h-[580px] flex flex-col justify-between overflow-y-auto">
-                            <div>
-                                <div class="text-center pb-3 mb-4 border-b border-slate-200">
-                                    <span class="text-xs font-bold text-brand-500 uppercase tracking-widest">Al-Jawaad Logistics</span>
-                                    <h3 class="text-sm font-bold text-slate-900 mt-0.5">Mobile Driver Form</h3>
-                                </div>
-
-                                <form id="driver-mobile-form" class="space-y-4" onsubmit="handleDriverFormSubmit(event)">
-                                    <!-- Vehicle Selection Odometer Tracker -->
-                                    <div class="space-y-1">
-                                        <label class="block text-[11px] font-bold text-slate-500 uppercase">Vehicle / Truck ID <span class="text-red-500">*</span></label>
-                                        <select id="driver-vehicle" required onchange="handleDriverVehicleSelect(this.value)" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50"></select>
-                                        <span class="block text-[10px] text-slate-400 font-medium" id="driver-current-odom-display">Current Truck Odometer: 0 KM</span>
-                                    </div>
-
-                                    <!-- Searchable Sub-Order selection -->
-                                    <div class="space-y-1">
-                                        <label class="block text-[11px] font-bold text-slate-500 uppercase">Order ID / Sub-Order <span class="text-red-500">*</span></label>
-                                        <div class="space-y-1">
-                                            <input type="text" oninput="filterDriverOrderSelect(this.value)" placeholder="🔍 Search Order ID..." class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-500">
-                                            <select id="driver-suborder-id" required class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
-                                                <option value="" disabled selected hidden>Choose Order...</option>
-                                            </select>
-                                        </div>
-                                    </div>
-
-                                    <!-- Odometer & Remaining calculation -->
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div class="space-y-1">
-                                            <label class="block text-[11px] font-bold text-slate-500 uppercase">Odometer KM <span class="text-red-500">*</span></label>
-                                            <input type="number" id="driver-odometer" required oninput="calculateDriverRemainingKm(this.value)" placeholder="New KM count" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
-                                        </div>
-                                        <div class="space-y-1">
-                                            <label class="block text-[11px] font-bold text-slate-500 uppercase">Trip Status <span class="text-red-500">*</span></label>
-                                            <select id="driver-trip-status" required class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
-                                                <option value="Loading">Loading</option>
-                                                <option value="In Transit">In Transit</option>
-                                                <option value="Unloading">Unloading</option>
-                                                <option value="Completed">Completed</option>
-                                                <option value="Maintenance">Maintenance</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-span-2">
-                                            <span class="block text-[10px] font-bold text-slate-500" id="driver-remaining-km-display">Remaining to Oil Change: — KM</span>
-                                        </div>
-                                    </div>
-
-                                    <div class="grid grid-cols-2 gap-2">
-                                        <div class="space-y-1">
-                                            <label class="block text-[11px] font-bold text-slate-500 uppercase">Route From <span class="text-red-500">*</span></label>
-                                            <input type="text" id="driver-from" required placeholder="Origin" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
-                                        </div>
-                                        <div class="space-y-1">
-                                            <label class="block text-[11px] font-bold text-slate-500 uppercase">Route To <span class="text-red-500">*</span></label>
-                                            <input type="text" id="driver-to" required placeholder="Destination" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
-                                        </div>
-                                    </div>
-
-                                    <!-- Pre-Trip Inspections [3] -->
-                                    <div class="border-t border-slate-200 pt-3 space-y-3">
-                                        <span class="block text-[10px] font-bold text-brand-500 uppercase tracking-wider">Operational Vehicle Inspection</span>
-
-                                        <div class="space-y-1.5">
-                                            <div class="flex justify-between items-center">
-                                                <label class="text-[11px] font-bold text-slate-500 uppercase">Engine Oil Level</label>
-                                                <select id="driver-engine-oil" onchange="toggleInspectionNote('driver-engine-oil', 'oilNotes-container')" class="bg-white border border-slate-200 text-xs px-2 py-1 rounded text-slate-800 focus:outline-none">
-                                                    <option value="It's Good">It's Good</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                            </div>
-                                            <div id="oilNotes-container" class="hidden">
-                                                <textarea id="oilNotes" rows="2" placeholder="Specify oil defects..." class="w-full px-3 py-1.5 bg-white border border-red-300 rounded-lg text-xs text-slate-800 focus:outline-none"></textarea>
-                                            </div>
-                                        </div>
-
-                                        <div class="space-y-1.5">
-                                            <div class="flex justify-between items-center">
-                                                <label class="text-[11px] font-bold text-slate-500 uppercase">Tires Condition</label>
-                                                <select id="driver-tires" onchange="toggleInspectionNote('driver-tires', 'tireNotes-container')" class="bg-white border border-slate-200 text-xs px-2 py-1 rounded text-slate-800 focus:outline-none">
-                                                    <option value="It's Good">It's Good</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                            </div>
-                                            <div id="tireNotes-container" class="hidden">
-                                                <textarea id="tireNotes" rows="2" placeholder="Specify tire defects..." class="w-full px-3 py-1.5 bg-white border border-red-300 rounded-lg text-xs text-slate-800 focus:outline-none"></textarea>
-                                            </div>
-                                        </div>
-
-                                        <div class="space-y-1.5">
-                                            <div class="flex justify-between items-center">
-                                                <label class="text-[11px] font-bold text-slate-500 uppercase">Windshield Status</label>
-                                                <select id="driver-windshield" onchange="toggleInspectionNote('driver-windshield', 'windshieldNotes-container')" class="bg-white border border-slate-200 text-xs px-2 py-1 rounded text-slate-800 focus:outline-none">
-                                                    <option value="It's Good">It's Good</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                            </div>
-                                            <div id="windshieldNotes-container" class="hidden">
-                                                <textarea id="windshieldNotes" rows="2" placeholder="Specify windshield defects..." class="w-full px-3 py-1.5 bg-white border border-red-300 rounded-lg text-xs text-slate-800 focus:outline-none"></textarea>
-                                            </div>
-                                        </div>
-
-                                        <div class="space-y-1.5">
-                                            <div class="flex justify-between items-center">
-                                                <label class="text-[11px] font-bold text-slate-500 uppercase">Cargo Box & Materials</label>
-                                                <select id="driver-cargo" onchange="toggleInspectionNote('driver-cargo', 'cargoNotes-container')" class="bg-white border border-slate-200 text-xs px-2 py-1 rounded text-slate-800 focus:outline-none">
-                                                    <option value="It's Good">It's Good</option>
-                                                    <option value="Other">Other</option>
-                                                </select>
-                                            </div>
-                                            <div id="cargoNotes-container" class="hidden">
-                                                <textarea id="cargoNotes" rows="2" placeholder="Specify cargo defects..." class="w-full px-3 py-1.5 bg-white border border-red-300 rounded-lg text-xs text-slate-800 focus:outline-none"></textarea>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <button type="submit" id="driver-submit-btn" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-lg text-xs font-bold transition-all shadow-lg flex items-center justify-center">
-                                        <span id="driver-btn-text">Submit Logs & Checklist</span>
-                                    </button>
-                                </form>
+                            <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Large Boxes (Wardrobe)</span>
+                                <span class="text-xl font-bold text-slate-900 block">180 Units</span>
                             </div>
-                            <div class="text-[9px] text-center text-slate-400 pt-3 border-t border-slate-200">Al-Jawaad Mobile Control Sheet</div>
+                            <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-1">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Stretch Film Rolls</span>
+                                <span class="text-xl font-bold text-slate-900 block">75 Rolls</span>
+                            </div>
                         </div>
                     </div>
                 </section>
 
                 <!-- FLEET VIEW 2: Add New Vehicle -->
                 <section id="add-vehicle-section" class="hidden max-w-3xl mx-auto">
-                    <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-8 space-y-6">
+                    <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-8 space-y-6 edit-gate">
                         <div>
                             <h2 class="text-xl font-bold text-slate-900">Add New Vehicle to Fleet</h2>
                             <p class="text-xs text-slate-500 mt-1">Configure truck records and oil swap limitation intervals.</p>
@@ -577,7 +738,7 @@
 
                 <!-- CRM VIEW 1: Add Customer [4] -->
                 <section id="add-customer-section" class="hidden max-w-3xl mx-auto">
-                    <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-8 space-y-6">
+                    <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-8 space-y-6 edit-gate">
                         <div>
                             <h2 class="text-xl font-bold text-slate-900">Add Customer Profile</h2>
                             <p class="text-xs text-slate-500 mt-1">Configure client details with default services mapped automatically [4].</p>
@@ -677,7 +838,7 @@
 
                 <!-- CRM VIEW 2: Create Quote (Advanced Selection Matrix & Dynamic Fields) [4] -->
                 <section id="create-quote-section" class="hidden max-w-4xl mx-auto space-y-6">
-                    <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-8 space-y-6">
+                    <div class="bg-white border border-slate-200 shadow-sm rounded-xl p-8 space-y-6 edit-gate">
                         <div>
                             <h2 class="text-xl font-bold text-slate-900">Create Quote & Estimate</h2>
                             <p class="text-xs text-slate-500 mt-1">Configure complex items, assign default values, and calculate VAT dynamically [4].</p>
@@ -883,7 +1044,7 @@
                                 <thead class="bg-slate-50 border-b border-slate-200">
                                     <tr>
                                         <th class="px-4 py-4 text-xs font-semibold text-slate-500">Logged Date</th>
-                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Truck ID</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500 font-mono">Truck ID</th>
                                         <th class="px-4 py-4 text-xs font-semibold text-slate-500">Sub-Order ID</th>
                                         <th class="px-4 py-4 text-xs font-semibold text-slate-500">Odometer</th>
                                         <th class="px-4 py-4 text-xs font-semibold text-slate-500">Route Coordinates</th>
@@ -911,7 +1072,7 @@
                             <table class="w-full text-left border-collapse">
                                 <thead class="bg-slate-50 border-b border-slate-200">
                                     <tr>
-                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500">Order ID</th>
+                                        <th class="px-4 py-4 text-xs font-semibold text-slate-500 font-mono">Order ID</th>
                                         <th class="px-4 py-4 text-xs font-semibold text-slate-500">Customer Name</th>
                                         <th class="px-4 py-4 text-xs font-semibold text-slate-500">Services</th>
                                         <th class="px-4 py-4 text-xs font-semibold text-slate-500">Price</th>
@@ -932,7 +1093,7 @@
                 <section id="operational-calendar-section" class="hidden space-y-6">
                     <div>
                         <h2 class="text-lg font-semibold text-slate-900">Operational Dispatch Calendar</h2>
-                        <p class="text-xs text-slate-500 mt-1">Plots live operational schedules for processing orders spanned across assignment dates [6].</p>
+                        <p class="text-xs text-slate-500 mt-1">Plots live operational schedules spanned across assignment dates [6].</p>
                     </div>
 
                     <!-- Calendar Render Frame -->
@@ -945,10 +1106,274 @@
         </main>
     </div>
 
+    <!-- ========================================================== -->
+    <!-- PORTAL B: DRIVERS & STAFF MULTI-LINGUAL MOBILE GATEWAY -->
+    <!-- ========================================================== -->
+    <main id="driver-mobile-section" class="hidden min-h-screen bg-slate-900 flex flex-col items-center justify-start p-4 space-y-6 overflow-y-auto no-print">
+        
+        <!-- Language Switcher Bar [3] -->
+        <div class="w-full max-w-lg flex justify-end space-x-2 bg-slate-800 p-2.5 rounded-2xl border border-slate-700">
+            <button onclick="setMobileLanguage('en')" class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition text-slate-300 bg-slate-700 hover:text-white" id="lang-btn-en">🇬🇧 English</button>
+            <button onclick="setMobileLanguage('ar')" class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition text-slate-300 bg-slate-700 hover:text-white" id="lang-btn-ar">🇸🇦 العربية</button>
+            <button onclick="setMobileLanguage('ur')" class="px-3 py-1.5 rounded-lg text-[10px] font-black uppercase transition text-slate-300 bg-slate-700 hover:text-white" id="lang-btn-ur">🇵🇰 اردو</button>
+        </div>
+
+        <!-- Localized Sign-In Gateway [3] -->
+        <div id="mobile-login-card" class="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-6">
+            <div class="text-center">
+                <span id="txt-mob-login-title" class="text-lg font-extrabold text-slate-900 block">Mobile Staff Sign-In</span>
+                <span id="txt-mob-login-subtitle" class="text-xs text-slate-400 font-bold block mt-1 uppercase tracking-wider">Access operational workflow</span>
+            </div>
+            <form id="mobile-login-form" class="space-y-4" onsubmit="handleMobileLogin(event)">
+                <div class="space-y-1.5">
+                    <label id="lbl-mob-username" class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Username</label>
+                    <input type="text" id="mob-username" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-slate-800">
+                </div>
+                <div class="space-y-1.5">
+                    <label id="lbl-mob-password" class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Password</label>
+                    <input type="password" id="mob-password" required class="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 text-slate-800">
+                </div>
+                <button type="submit" id="btn-mob-submit" class="w-full py-3.5 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition shadow-lg shadow-brand-500/15">
+                    Sign In
+                </button>
+            </form>
+            <div class="text-center pt-2 border-t">
+                <button onclick="changeSessionRole('Admin')" class="text-xs font-bold text-brand-500 hover:underline" id="btn-back-admin-portal">
+                    Back to Admin Back-Office
+                </button>
+            </div>
+        </div>
+
+        <!-- Post-Auth Mobile Workspace [3] -->
+        <div id="mobile-auth-workspace" class="w-full max-w-lg space-y-6 hidden">
+            
+            <!-- Greeting & Selector Hub [3] -->
+            <div class="bg-white rounded-3xl p-6 border border-slate-200 shadow-xl space-y-4 text-center">
+                <span id="mobile-welcome-banner" class="text-base font-black text-slate-900 block">Welcome, Staff member</span>
+                
+                <div class="grid grid-cols-1 gap-3">
+                    <button onclick="switchMobileSubView('inspection')" id="mob-btn-inspect" class="py-4 px-5 bg-brand-500 hover:bg-brand-600 text-white font-extrabold text-sm rounded-2xl shadow-lg shadow-brand-500/15 transition flex items-center justify-center space-x-2">
+                        <span>🚛</span> <span id="lbl-sub-inspect">Vehicle Inspection Checklist</span>
+                    </button>
+                    <button onclick="switchMobileSubView('request')" id="mob-btn-request" class="py-4 px-5 bg-slate-800 hover:bg-slate-900 text-white font-extrabold text-sm rounded-2xl shadow-lg transition flex items-center justify-center space-x-2">
+                        <span>🎟️</span> <span id="lbl-sub-request">Submit Employee Request</span>
+                    </button>
+                </div>
+
+                <div class="pt-3 border-t">
+                    <button onclick="signOutMobileUser()" class="text-xs font-bold text-red-500 hover:underline" id="lbl-mob-signout">Sign Out</button>
+                </div>
+            </div>
+
+            <!-- DRIVER TASK A: Vehicle Inspection Checklist Form [3] -->
+            <div id="mobile-subview-inspection" class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-5 hidden">
+                <div class="text-center pb-3 border-b border-slate-200">
+                    <h3 id="lbl-inspect-h3" class="text-sm font-black text-slate-900 uppercase tracking-widest">Inspection Checklist</h3>
+                </div>
+
+                <form id="driver-mobile-form" class="space-y-4" onsubmit="handleDriverFormSubmit(event)">
+                    <!-- Vehicle Selection Odometer Tracker -->
+                    <div class="space-y-1">
+                        <label id="lbl-ins-vehicle" class="block text-[11px] font-bold text-slate-500 uppercase">Vehicle / Truck ID <span class="text-red-500">*</span></label>
+                        <select id="driver-vehicle" required onchange="handleDriverVehicleSelect(this.value)" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50"></select>
+                        <span class="block text-[10px] text-slate-400 font-medium" id="driver-current-odom-display">Current Truck Odometer: 0 KM</span>
+                    </div>
+
+                    <!-- Searchable Sub-Order selection -->
+                    <div class="space-y-1">
+                        <label id="lbl-ins-order" class="block text-[11px] font-bold text-slate-500 uppercase">Order ID / Sub-Order <span class="text-red-500">*</span></label>
+                        <div class="space-y-1">
+                            <input type="text" id="ins-order-search" oninput="filterDriverOrderSelect(this.value)" placeholder="🔍 Search Order ID..." class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] text-slate-800 focus:outline-none focus:ring-1 focus:ring-brand-500">
+                            <select id="driver-suborder-id" required class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                                <option value="" disabled selected hidden>Choose Order...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Odometer & Remaining calculation -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="space-y-1">
+                            <label id="lbl-ins-odo" class="block text-[11px] font-bold text-slate-500 uppercase">Odometer KM <span class="text-red-500">*</span></label>
+                            <input type="number" id="driver-odometer" required oninput="calculateDriverRemainingKm(this.value)" placeholder="New KM count" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                        </div>
+                        <div class="space-y-1">
+                            <label id="lbl-ins-status" class="block text-[11px] font-bold text-slate-500 uppercase">Trip Status <span class="text-red-500">*</span></label>
+                            <select id="driver-trip-status" required class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                                <option value="Loading">Loading</option>
+                                <option value="In Transit">In Transit</option>
+                                <option value="Unloading">Unloading</option>
+                                <option value="Completed">Completed</option>
+                                <option value="Maintenance">Maintenance</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="block text-[10px] font-bold text-slate-500" id="driver-remaining-km-display">Remaining to Oil Change: — KM</span>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="space-y-1">
+                            <label id="lbl-ins-from" class="block text-[11px] font-bold text-slate-500 uppercase">Route From <span class="text-red-500">*</span></label>
+                            <input type="text" id="driver-from" required placeholder="Origin" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                        </div>
+                        <div class="space-y-1">
+                            <label id="lbl-ins-to" class="block text-[11px] font-bold text-slate-500 uppercase">Route To <span class="text-red-500">*</span></label>
+                            <input type="text" id="driver-to" required placeholder="Destination" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                        </div>
+                    </div>
+
+                    <!-- Pre-Trip Inspections -->
+                    <div class="border-t border-slate-200 pt-3 space-y-3">
+                        <span id="lbl-ins-pre-trip-section" class="block text-[10px] font-bold text-brand-500 uppercase tracking-wider">Operational Vehicle Inspection</span>
+
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between items-center">
+                                <label id="lbl-ins-oil" class="text-[11px] font-bold text-slate-500 uppercase">Engine Oil Level</label>
+                                <select id="driver-engine-oil" onchange="toggleInspectionNote('driver-engine-oil', 'oilNotes-container')" class="bg-white border border-slate-200 text-xs px-2 py-1 rounded text-slate-800 focus:outline-none">
+                                    <option value="It's Good">It's Good</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div id="oilNotes-container" class="hidden">
+                                <textarea id="oilNotes" rows="2" placeholder="Specify oil defects..." class="w-full px-3 py-1.5 bg-white border border-red-300 rounded-lg text-xs text-slate-800 focus:outline-none"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between items-center">
+                                <label id="lbl-ins-tires" class="text-[11px] font-bold text-slate-500 uppercase">Tires Condition</label>
+                                <select id="driver-tires" onchange="toggleInspectionNote('driver-tires', 'tireNotes-container')" class="bg-white border border-slate-200 text-xs px-2 py-1 rounded text-slate-800 focus:outline-none">
+                                    <option value="It's Good">It's Good</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div id="tireNotes-container" class="hidden">
+                                <textarea id="tireNotes" rows="2" placeholder="Specify tire defects..." class="w-full px-3 py-1.5 bg-white border border-red-300 rounded-lg text-xs text-slate-800 focus:outline-none"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between items-center">
+                                <label id="lbl-ins-windshield" class="text-[11px] font-bold text-slate-500 uppercase">Windshield Status</label>
+                                <select id="driver-windshield" onchange="toggleInspectionNote('driver-windshield', 'windshieldNotes-container')" class="bg-white border border-slate-200 text-xs px-2 py-1 rounded text-slate-800 focus:outline-none">
+                                    <option value="It's Good">It's Good</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div id="windshieldNotes-container" class="hidden">
+                                <textarea id="windshieldNotes" rows="2" placeholder="Specify windshield defects..." class="w-full px-3 py-1.5 bg-white border border-red-300 rounded-lg text-xs text-slate-800 focus:outline-none"></textarea>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between items-center">
+                                <label id="lbl-ins-cargo" class="text-[11px] font-bold text-slate-500 uppercase">Cargo Box & Materials</label>
+                                <select id="driver-cargo" onchange="toggleInspectionNote('driver-cargo', 'cargoNotes-container')" class="bg-white border border-slate-200 text-xs px-2 py-1 rounded text-slate-800 focus:outline-none">
+                                    <option value="It's Good">It's Good</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div id="cargoNotes-container" class="hidden">
+                                <textarea id="cargoNotes" rows="2" placeholder="Specify cargo defects..." class="w-full px-3 py-1.5 bg-white border border-red-300 rounded-lg text-xs text-slate-800 focus:outline-none"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6 Visual Equipment Checklist (Binary Switches) [3] -->
+                    <div class="border-t border-slate-200 pt-3 space-y-3">
+                        <span id="lbl-ins-accessories" class="block text-[10px] font-bold text-brand-500 uppercase tracking-wider">Accessory Inventory Verification</span>
+                        <div class="grid grid-cols-2 gap-2" id="driver-materials-grid">
+                            <!-- Interactive Toggle Cards -->
+                        </div>
+                    </div>
+
+                    <div class="space-y-1">
+                        <label id="lbl-ins-notes" class="block text-[11px] font-bold text-slate-500 uppercase">Optional Notes</label>
+                        <textarea id="driver-optional-notes" rows="2" placeholder="Observations..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50"></textarea>
+                    </div>
+
+                    <button type="submit" id="driver-submit-btn" class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white rounded-xl text-xs font-bold uppercase transition-all shadow-lg flex items-center justify-center">
+                        <span id="driver-btn-text">Submit Checklist</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- DRIVER TASK B: Submit Employee Request [3] -->
+            <div id="mobile-subview-request" class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-2xl space-y-5 hidden">
+                <div class="text-center pb-3 border-b border-slate-200">
+                    <h3 id="lbl-request-h3" class="text-sm font-black text-slate-900 uppercase tracking-widest">Employee Request Utility</h3>
+                </div>
+
+                <form id="employee-request-form" class="space-y-4" onsubmit="handleEmployeeRequestSubmit(event)">
+                    <!-- Email -->
+                    <div class="space-y-1">
+                        <label id="lbl-req-email" class="block text-[11px] font-bold text-slate-500 uppercase">Employee Email <span class="text-red-500">*</span></label>
+                        <input type="email" id="req-email" required placeholder="e.g. staff@aljawad.sa" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                    </div>
+
+                    <!-- Name populated live -->
+                    <div class="space-y-1">
+                        <label id="lbl-req-name" class="block text-[11px] font-bold text-slate-500 uppercase">Employee Name <span class="text-red-500">*</span></label>
+                        <select id="req-employee-name" required class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50"></select>
+                    </div>
+
+                    <!-- Request Type -->
+                    <div class="space-y-1">
+                        <label id="lbl-req-type" class="block text-[11px] font-bold text-slate-500 uppercase">Request Type <span class="text-red-500">*</span></label>
+                        <select id="req-type" required onchange="handleRequestTypeChange(this.value)" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                            <option value="Overtime" selected>Overtime</option>
+                            <option value="Vacation">Vacation</option>
+                            <option value="Sick Leave">Sick Leave</option>
+                            <option value="Avilio">Avilio</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+
+                    <!-- Conditional Other Input Box capped at 15 chars -->
+                    <div id="req-other-container" class="space-y-1 hidden">
+                        <label id="lbl-req-other" class="block text-[11px] font-bold text-slate-500 uppercase">Specify Request Type <span class="text-red-500">*</span></label>
+                        <input type="text" id="req-type-other" maxlength="15" placeholder="Specify here (max 15)" class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50">
+                    </div>
+
+                    <!-- Details -->
+                    <div class="space-y-1">
+                        <label id="lbl-req-details" class="block text-[11px] font-bold text-slate-500 uppercase">Request Details <span class="text-red-500">*</span></label>
+                        <textarea id="req-details" required rows="3" placeholder="Input details here..." class="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-brand-500/50"></textarea>
+                    </div>
+
+                    <!-- File attachment placeholder -->
+                    <div class="space-y-1">
+                        <label id="lbl-req-file" class="block text-[11px] font-bold text-slate-500 uppercase">Attachment <span class="text-xs text-slate-400 font-normal">(Optional)</span></label>
+                        <input type="file" id="req-file-placeholder" class="w-full px-3 py-2 border border-slate-200 bg-slate-50 rounded-lg text-xs cursor-pointer text-slate-500">
+                    </div>
+
+                    <button type="submit" id="request-submit-btn" class="w-full py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold uppercase transition shadow-lg">
+                        <span id="request-btn-text">Submit Request</span>
+                    </button>
+                </form>
+            </div>
+
+            <!-- Generic success message popup -->
+            <div id="drvSuccessScreen" class="hidden bg-white border border-slate-200 rounded-3xl p-8 text-center shadow-lg space-y-6">
+                <div class="w-16 h-16 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto shadow-inner">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-black text-slate-900" id="lbl-success-title">Submission Processed</h3>
+                    <p class="text-xs text-slate-500 mt-2" id="lbl-success-desc">Log records generated and synced successfully.</p>
+                </div>
+                <button onclick="resetDriverApp()" class="w-full bg-brand-500 text-white text-xs font-bold py-3.5 px-6 rounded-xl hover:bg-brand-600 transition" id="lbl-success-btn">
+                    Return to Form
+                </button>
+            </div>
+
+        </div>
+    </main>
+
     <!-- Firebase SDK Modular Imports -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         // Your web app's Firebase configuration [1]
         const firebaseConfig = {
@@ -965,6 +1390,9 @@
         try {
             app = initializeApp(firebaseConfig);
             db = getFirestore(app);
+            
+            // Initialize EmailJS summary routing token credentials [4]
+            window.emailjs.init({ publicKey: "DLaK67H2H4H_vQ967" });
         } catch (error) {
             console.error("Firebase startup fault:", error);
         }
@@ -976,6 +1404,151 @@
         window.allQuotes = [];
         window.allDriverLogs = [];
         window.calendarInstance = null;
+        window.isAdminAuthenticated = false;
+        
+        // Multi-lingual dictionary [3]
+        window.currentMobileLang = "en";
+        const TRANSLATIONS = {
+            en: {
+                txt_mob_login_title: "Mobile Staff Sign-In",
+                txt_mob_login_subtitle: "Access operational workflow",
+                lbl_mob_username: "Username",
+                lbl_mob_password: "Password",
+                btn_mob_submit: "Sign In",
+                btn_back_admin_portal: "Back to Admin Back-Office",
+                lbl_mob_signout: "Sign Out",
+                mobile_welcome_banner: "Welcome, Staff member",
+                lbl_sub_inspect: "Vehicle Inspection Checklist",
+                lbl_sub_request: "Submit Employee Request",
+                lbl_inspect_h3: "Inspection Checklist",
+                lbl_ins_vehicle: "Vehicle / Truck ID",
+                lbl_ins_order: "Order ID / Sub-Order",
+                lbl_ins_odo: "Odometer KM",
+                lbl_ins_status: "Trip Status",
+                lbl_ins_from: "Route From",
+                lbl_ins_to: "Route To",
+                lbl_ins_pre_trip_section: "Operational Vehicle Inspection",
+                lbl_ins_oil: "Engine Oil Level",
+                lbl_ins_tires: "Tires Condition",
+                lbl_ins_windshield: "Windshield Status",
+                lbl_ins_cargo: "Cargo Box & Materials",
+                lbl_ins_accessories: "Accessory Inventory Verification",
+                lbl_ins_notes: "Optional Notes",
+                driver_btn_text: "Submit Checklist",
+                lbl_request_h3: "Employee Request Utility",
+                lbl_req_email: "Employee Email",
+                lbl_req_name: "Employee Name",
+                lbl_req_type: "Request Type",
+                lbl_req_other: "Specify Request Type",
+                lbl_req_details: "Request Details",
+                lbl_req_file: "Attachment",
+                request_btn_text: "Submit Request",
+                lbl_success_title: "Submission Processed",
+                lbl_success_desc: "Log records generated and synced successfully.",
+                lbl_success_btn: "Return to Form"
+            },
+            ar: {
+                txt_mob_login_title: "تسجيل دخول الموظفين عبر الجوال",
+                txt_mob_login_subtitle: "الوصول إلى واجهة العمليات التشغيلية",
+                lbl_mob_username: "اسم المستخدم",
+                lbl_mob_password: "كلمة المرور",
+                btn_mob_submit: "تسجيل الدخول",
+                btn_back_admin_portal: "العودة إلى لوحة التحكم للإدارة",
+                lbl_mob_signout: "تسجيل الخروج",
+                mobile_welcome_banner: "مرحباً بك، عضو فريق العمل",
+                lbl_sub_inspect: "قائمة فحص شاحنتك اليومية",
+                lbl_sub_request: "تقديم طلب خدمات الموظفين",
+                lbl_inspect_h3: "نموذج الفحص التشغيلي",
+                lbl_ins_vehicle: "رقم الشاحنة / السيارة",
+                lbl_ins_order: "رقم الطلب / الشحنة",
+                lbl_ins_odo: "قراءة عداد المسافة (الكيلومتر)",
+                lbl_ins_status: "حالة الرحلة",
+                lbl_ins_from: "بداية الرحلة من",
+                lbl_ins_to: "نهاية الرحلة إلى",
+                lbl_ins_pre_trip_section: "الفحص التشغيلي للمركبة",
+                lbl_ins_oil: "مستوى زيت المحرك",
+                lbl_ins_tires: "حالة الإطارات",
+                lbl_ins_windshield: "سلامة الزجاج الأمامي",
+                lbl_ins_cargo: "صندوق الشحن والمواد المرفقة",
+                lbl_ins_accessories: "التحقق من قائمة المعدات والعهدة",
+                lbl_ins_notes: "ملاحظات إضافية",
+                driver_btn_text: "تقديم تقرير الفحص",
+                lbl_request_h3: "بوابة طلبات موظفي الشركة",
+                lbl_req_email: "البريد الإلكتروني للموظف",
+                lbl_req_name: "اسم الموظف بالكامل",
+                lbl_req_type: "نوع الطلب التشغيلي",
+                lbl_req_other: "تحديد تفاصيل نوع الطلب",
+                lbl_req_details: "تفاصيل الطلب وشرح الخدمة",
+                lbl_req_file: "إرفاق مستند أو صورة",
+                request_btn_text: "إرسال الطلب للإدارة",
+                lbl_success_title: "تم استلام الطلب التشغيلي",
+                lbl_success_desc: "تم إنشاء السجلات ومزامنتها مباشرة مع الإدارة المركزية.",
+                lbl_success_btn: "العودة إلى النموذج"
+            },
+            ur: {
+                txt_mob_login_title: "موبائل اسٹاف سائن ان",
+                txt_mob_login_subtitle: "آپریشنل ورک فلو تک رسائی حاصل کریں",
+                lbl_mob_username: "صارف کا نام (یوزرنیم)",
+                lbl_mob_password: "پاس ورڈ",
+                btn_mob_submit: "سائن ان کریں",
+                btn_back_admin_portal: "ایڈمن بیک آفس پر واپس جائیں",
+                lbl_mob_signout: "سائن آؤٹ کریں",
+                mobile_welcome_banner: "خوش آمدید، عملے کے رکن",
+                lbl_sub_inspect: "گاڑی کے معائنے کی فہرست",
+                lbl_sub_request: "عملے کی درخواست جمع کروائیں",
+                lbl_inspect_h3: "گاڑی کی چیک لسٹ",
+                lbl_ins_vehicle: "گاڑی / ٹرک نمبر",
+                lbl_ins_order: "آرڈر نمبر / سب آرڈر",
+                lbl_ins_odo: "اوڈومیٹر (کلومیٹر)",
+                lbl_ins_status: "سفر کی حالت",
+                lbl_ins_from: "سفر کا آغاز کہاں سے",
+                lbl_ins_to: "سفر کا اختتام کہاں پر",
+                lbl_ins_pre_trip_section: "گاڑی کا آپریشنل معائنہ",
+                lbl_ins_oil: "انجن آئل کی سطح",
+                lbl_ins_tires: "ٹائروں کی حالت",
+                lbl_ins_windshield: "ونڈ شیلڈ کی حالت",
+                lbl_ins_cargo: "کارگو باکس اور مواد",
+                lbl_ins_accessories: "گاڑی کی عہدیوں اور آلات کی تصدیق",
+                lbl_ins_notes: "اضافی نوٹس",
+                driver_btn_text: "رپورٹ جمع کروائیں",
+                lbl_request_h3: "عملے کی درخواست پورٹل",
+                lbl_req_email: "ملازم کا ای میل",
+                lbl_req_name: "ملازم کا نام",
+                lbl_req_type: "درخواست کی قسم",
+                lbl_req_other: "درخواست کی تفصیل لکھیں",
+                lbl_req_details: "درخواست کی تفصیلات",
+                lbl_req_file: "منسلکہ فائل",
+                request_btn_text: "درخواست جمع کروائیں",
+                lbl_success_title: "درخواست موصول ہو گئی",
+                lbl_success_desc: "ریکارڈ کامیابی کے ساتھ ایڈمنسٹریشن ڈیٹا بیس سے منسلک کر دیا گیا ہے۔",
+                lbl_success_btn: "فارم پر واپس جائیں"
+            }
+        };
+
+        // Standard structural permissions bound to Employee Job Titles [1]
+        const ROLE_PERMISSIONS = {
+            "Admin": { canEdit: true, allowedViews: ["dashboard-metrics-section", "add-employee-section", "view-employees-section", "hr-analytics-section", "manage-permissions-section", "add-vehicle-section", "fleet-ledger-section", "add-customer-section", "create-quote-section", "quotes-directory-section", "drivers-logs-section", "order-tracker-section", "operational-calendar-section", "materials-manager-section", "governance-settings-section"] },
+            "Operation Manager": { canEdit: true, allowedViews: ["dashboard-metrics-section", "add-employee-section", "view-employees-section", "hr-analytics-section", "add-vehicle-section", "fleet-ledger-section", "add-customer-section", "create-quote-section", "quotes-directory-section", "drivers-logs-section", "order-tracker-section", "operational-calendar-section", "materials-manager-section"] },
+            "Sales": { canEdit: true, allowedViews: ["dashboard-metrics-section", "add-customer-section", "create-quote-section", "quotes-directory-section", "operational-calendar-section"] },
+            "CS": { canEdit: true, allowedViews: ["dashboard-metrics-section", "add-customer-section", "create-quote-section", "quotes-directory-section"] },
+            "Supervisor": { canEdit: true, allowedViews: ["dashboard-metrics-section", "fleet-ledger-section", "order-tracker-section", "operational-calendar-section", "materials-manager-section"] },
+            "Driver": { canEdit: false, allowedViews: ["dashboard-metrics-section", "fleet-ledger-section", "drivers-logs-section"] },
+            "Labor": { canEdit: false, allowedViews: ["dashboard-metrics-section", "materials-manager-section"] }
+        };
+
+        // Authentication State Variables
+        window.activeMobileUser = null;
+        window.currentAdminConfig = { email: "Mohamed.jawadmove@gmail.com", pass: "Aljawad@2026" };
+
+        // Visual Accessories Toggle List [3]
+        const MOBILE_GEAR_LIST = [
+            { id: "spareTire", en: "Spare Tire", ar: "الاطار الاحتياطي", ur: "اسپیئر ٹائر" },
+            { id: "warningTriangle", en: "Warning Triangle", ar: "مثلث التحذير", ur: "انتباہی مثلث" },
+            { id: "secondSpare", en: "Second Spare", ar: "الاستبن", ur: "دوسرا اسپیئر" },
+            { id: "fireExtinguisher", en: "Fire Extinguisher", ar: "طفاية الحريق", ur: "آگ بجھانے والا آلہ" },
+            { id: "lugWrench", en: "Lug Wrench", ar: "مفتاح العجل", ur: "پانا" },
+            { id: "carJack", en: "Car Jack", ar: "الكوريك", ur: "جیک" }
+        ];
 
         // Strict Service Types List [4]
         const SERVICES_LIST = [
@@ -985,37 +1558,181 @@
             "Refer Distribution", "Inventory"
         ];
 
-        // Role-based layout switcher [1]
+        // 3-Language Translator core [3]
+        window.setMobileLanguage = function(langKey) {
+            window.currentMobileLang = langKey;
+            
+            // Highlight active button
+            ["en", "ar", "ur"].forEach(k => {
+                const btn = document.getElementById(`lang-btn-${k}`);
+                if (k === langKey) {
+                    btn.classList.add('bg-brand-500', 'text-white');
+                    btn.classList.remove('bg-slate-700', 'text-slate-300');
+                } else {
+                    btn.classList.remove('bg-brand-500', 'text-white');
+                    btn.classList.add('bg-slate-700', 'text-slate-300');
+                }
+            });
+
+            // Iterate dictionary elements
+            const dict = TRANSLATIONS[langKey];
+            Object.keys(dict).forEach(keyId => {
+                const el = document.getElementById(keyId);
+                if (el) {
+                    if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") {
+                        el.placeholder = dict[keyId];
+                    } else {
+                        el.textContent = dict[keyId];
+                    }
+                }
+            });
+
+            // Re-render visual accessories labels [3]
+            updateEquipmentGridUI();
+        }
+
+        // Accordion collapsing navigation controller [1]
+        window.toggleAccordion = function(elementId) {
+            const accordion = document.getElementById(elementId);
+            const arrow = document.getElementById(`arrow-${elementId}`);
+            if (!accordion) return;
+
+            // Close other accordions
+            const accordions = ["acc-dash", "acc-crm", "acc-ops", "acc-hr", "acc-wh", "acc-gov"];
+            accordions.forEach(accId => {
+                if (accId !== elementId) {
+                    const accEl = document.getElementById(accId);
+                    const arrowEl = document.getElementById(`arrow-${accId}`);
+                    if (accEl) {
+                        accEl.classList.remove('open');
+                        arrowEl.style.transform = "rotate(0deg)";
+                    }
+                }
+            });
+
+            // Toggle target accordion
+            if (accordion.classList.contains('open')) {
+                accordion.classList.remove('open');
+                arrow.style.transform = "rotate(0deg)";
+            } else {
+                accordion.classList.add('open');
+                arrow.style.transform = "rotate(180deg)";
+            }
+        }
+
+        // Hardcoded admin credentials verification [1]
+        window.handleAdminLogin = function(event) {
+            event.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const pass = document.getElementById('login-password').value;
+
+            if (email === window.currentAdminConfig.email && pass === window.currentAdminConfig.pass) {
+                window.isAdminAuthenticated = true;
+                document.getElementById('admin-login-modal').classList.add('hidden');
+                document.getElementById('app-sidebar').classList.remove('hidden');
+                switchView('dashboard-metrics-section');
+                showToast("System Access Authorized!", "success");
+            } else {
+                showToast("Invalid credentials provided.", "error");
+            }
+        }
+
+        window.bypassToDriverPortal = function() {
+            document.getElementById('admin-login-modal').classList.add('hidden');
+            document.getElementById('session-role').value = "Driver";
+            changeSessionRole("Driver");
+        }
+
+        window.triggerSignOut = function() {
+            window.isAdminAuthenticated = false;
+            document.getElementById('app-sidebar').classList.add('hidden');
+            document.getElementById('admin-login-modal').classList.remove('hidden');
+            showToast("Logged out successfully.", "success");
+        }
+
+        // Governance-Settings save function [1]
+        window.saveAdminCredentials = function(event) {
+            event.preventDefault();
+            const email = document.getElementById('gov-admin-email').value.trim();
+            const pass = document.getElementById('gov-admin-password').value;
+            
+            window.currentAdminConfig.email = email;
+            window.currentAdminConfig.pass = pass;
+            localStorage.setItem("aljawad_admin_config", JSON.stringify(window.currentAdminConfig));
+            showToast("System Admin Credentials Updated Locally!", "success");
+        }
+
+        // Impersonator with Strict role-based permissions matrix [1]
         window.changeSessionRole = function(role) {
             const headerUserBadge = document.getElementById('header-user-badge');
+            
             if (role === 'Driver') {
                 headerUserBadge.textContent = "Welcome, Active Driver";
-                document.getElementById('sidebar-hr-section').classList.add('hidden');
-                document.getElementById('sidebar-access-section').classList.add('hidden');
-                document.getElementById('sidebar-crm-section').classList.add('hidden');
-                document.getElementById('sidebar-operations-section').classList.add('hidden');
-                document.getElementById('sidebar-add-vehicle-link').classList.add('hidden');
-                document.getElementById('sidebar-fleet-ledger-link').classList.add('hidden');
+                document.getElementById('app-sidebar').classList.add('hidden');
                 switchView('driver-mobile-section');
             } else {
-                headerUserBadge.textContent = "Welcome, Administrator";
-                document.getElementById('sidebar-hr-section').classList.remove('hidden');
-                document.getElementById('sidebar-access-section').classList.remove('hidden');
-                document.getElementById('sidebar-crm-section').classList.remove('hidden');
-                document.getElementById('sidebar-operations-section').classList.remove('hidden');
-                document.getElementById('sidebar-add-vehicle-link').classList.remove('hidden');
-                document.getElementById('sidebar-fleet-ledger-link').classList.remove('hidden');
-                switchView('add-employee-section');
+                headerUserBadge.textContent = `Welcome, Impersonating ${role}`;
+                document.getElementById('app-sidebar').classList.remove('hidden');
+                
+                // Switch default view
+                const permissions = ROLE_PERMISSIONS[role] || ROLE_PERMISSIONS["Labor"];
+                const targetView = permissions.allowedViews[0] || "dashboard-metrics-section";
+                switchView(targetView);
+                
+                // Enforce binary visual boundaries ("Can Edit" vs "Can View Only") [1]
+                const canEdit = permissions.canEdit;
+                enforceVisualPermissionLimits(canEdit);
             }
+        }
+
+        /**
+         * Disables or hides editing controls globally when role is Read-Only [1]
+         */
+        function enforceVisualPermissionLimits(canEdit) {
+            const editGates = document.querySelectorAll('.edit-gate');
+            editGates.forEach(container => {
+                const inputs = container.querySelectorAll('input, select, textarea');
+                const buttons = container.querySelectorAll('button[type="submit"], button.bg-brand-500');
+                
+                inputs.forEach(el => {
+                    if (!canEdit) {
+                        el.setAttribute('disabled', 'true');
+                        el.classList.add('bg-slate-100', 'cursor-not-allowed');
+                    } else {
+                        el.removeAttribute('disabled');
+                        el.classList.remove('bg-slate-100', 'cursor-not-allowed');
+                    }
+                });
+
+                buttons.forEach(btn => {
+                    if (!canEdit) {
+                        btn.classList.add('opacity-40', 'pointer-events-none', 'cursor-not-allowed');
+                    } else {
+                        btn.classList.remove('opacity-40', 'pointer-events-none', 'cursor-not-allowed');
+                    }
+                });
+            });
+
+            // Adjust specific CRUD and Delete actions in the employee directories [1]
+            const listActions = document.querySelectorAll('.action-bench');
+            listActions.forEach(bench => {
+                if (!canEdit) {
+                    bench.classList.add('hidden');
+                } else {
+                    bench.classList.remove('hidden');
+                }
+            });
         }
 
         // Navigation Manager
         window.switchView = function(viewId) {
             const views = [
-                'add-employee-section', 'view-employees-section', 'manage-permissions-section',
-                'driver-mobile-section', 'add-vehicle-section', 'fleet-ledger-section',
-                'add-customer-section', 'create-quote-section', 'quotes-directory-section',
-                'drivers-logs-section', 'order-tracker-section', 'operational-calendar-section'
+                'dashboard-metrics-section', 'add-employee-section', 'view-employees-section', 
+                'manage-permissions-section', 'driver-mobile-section', 'add-vehicle-section', 
+                'fleet-ledger-section', 'add-customer-section', 'create-quote-section', 
+                'quotes-directory-section', 'drivers-logs-section', 'order-tracker-section', 
+                'operational-calendar-section', 'hr-analytics-section', 'materials-manager-section',
+                'governance-settings-section'
             ];
             
             views.forEach(view => {
@@ -1029,13 +1746,21 @@
                 }
             });
 
+            // Handle sidebar styling targets
             const pageTitle = document.getElementById('page-title');
-            if (viewId === 'add-employee-section') {
-                pageTitle.textContent = "Add Employee";
+            if (viewId === 'dashboard-metrics-section') {
+                pageTitle.textContent = "Dashboard Hub";
+                setActiveSidebarButton('btn-dashboard-metrics');
+            } else if (viewId === 'add-employee-section') {
+                pageTitle.textContent = "Register Staff CRUD";
                 setActiveSidebarButton('btn-add-employee');
             } else if (viewId === 'view-employees-section') {
-                pageTitle.textContent = "Employee Directory";
+                pageTitle.textContent = "Roster & Employee Directory";
                 setActiveSidebarButton('btn-view-employees');
+            } else if (viewId === 'hr-analytics-section') {
+                pageTitle.textContent = "HR Governance Reports";
+                setActiveSidebarButton('btn-hr-analytics');
+                calculateHRMetrics();
             } else if (viewId === 'manage-permissions-section') {
                 pageTitle.textContent = "Manage Permissions";
                 setActiveSidebarButton('btn-manage-permissions');
@@ -1050,7 +1775,7 @@
                 pageTitle.textContent = "Fleet Ledger";
                 setActiveSidebarButton('btn-fleet-ledger');
             } else if (viewId === 'add-customer-section') {
-                pageTitle.textContent = "Add Customer Profile";
+                pageTitle.textContent = "Leads Management";
                 setActiveSidebarButton('btn-add-customer');
             } else if (viewId === 'create-quote-section') {
                 pageTitle.textContent = "Create Quote";
@@ -1064,6 +1789,12 @@
             } else if (viewId === 'order-tracker-section') {
                 pageTitle.textContent = "Order Status Tracker";
                 setActiveSidebarButton('btn-order-tracker');
+            } else if (viewId === 'materials-manager-section') {
+                pageTitle.textContent = "Materials & Consumables Manager";
+                setActiveSidebarButton('btn-materials-manager');
+            } else if (viewId === 'governance-settings-section') {
+                pageTitle.textContent = "Governance Settings & Override";
+                setActiveSidebarButton('btn-governance');
             } else if (viewId === 'operational-calendar-section') {
                 pageTitle.textContent = "Operational Calendar";
                 setActiveSidebarButton('btn-operational-calendar');
@@ -1073,14 +1804,19 @@
                     }
                 }, 100);
             }
+
+            // Sync visual limits on transition
+            const activeImpersonator = document.getElementById('session-role').value;
+            const activePerms = ROLE_PERMISSIONS[activeImpersonator] || ROLE_PERMISSIONS["Labor"];
+            enforceVisualPermissionLimits(activePerms.canEdit);
         }
 
         function setActiveSidebarButton(activeBtnId) {
             const buttons = [
-                'btn-add-employee', 'btn-view-employees', 'btn-manage-permissions', 
-                'btn-driver-mobile', 'btn-add-vehicle', 'btn-fleet-ledger',
-                'btn-add-customer', 'btn-create-quote', 'btn-quotes-directory',
-                'btn-drivers-logs', 'btn-operational-calendar', 'btn-order-tracker'
+                'btn-dashboard-metrics', 'btn-add-employee', 'btn-view-employees', 'btn-manage-permissions', 
+                'btn-driver-mobile', 'btn-add-vehicle', 'btn-fleet-ledger', 'btn-hr-analytics',
+                'btn-add-customer', 'btn-create-quote', 'btn-quotes-directory', 'btn-materials-manager',
+                'btn-drivers-logs', 'btn-operational-calendar', 'btn-order-tracker', 'btn-governance'
             ];
             buttons.forEach(btnId => {
                 const btn = document.getElementById(btnId);
@@ -1112,6 +1848,9 @@
                 renderEmployeesTable(employees);
                 renderQuoteAssignmentDropdowns();
                 populateSimulatedDriversDropdown(employees);
+                populateMobileEmployeesList(employees);
+                calculateDashboardMetrics();
+                calculateHRMetrics();
             });
 
             // 2. Vehicles stream [7]
@@ -1124,6 +1863,7 @@
                 renderFleetLedger(vehicles);
                 renderDriverVehicleDropdown(vehicles);
                 renderQuoteAssignmentDropdowns();
+                calculateDashboardMetrics();
             });
 
             // 3. Customers stream [7]
@@ -1144,6 +1884,7 @@
                 });
                 window.allDriverLogs = logs;
                 renderDriversLogsTable(logs);
+                calculateDashboardMetrics();
             });
 
             // 5. Quotes / Orders stream [7]
@@ -1161,14 +1902,14 @@
         }
 
 
-        /* DIRECTORY RENDERING LOGICS */
+        /* DIRECTORY RENDERING LOGICS & CORE CRUD BENCH [2] */
 
         function renderEmployeesTable(employees) {
             const tableBody = document.getElementById('employees-table-body');
             if (!tableBody) return;
 
             if (employees.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-slate-400">No employees registered yet.</td></tr>`;
+                tableBody.innerHTML = `<tr><td colspan="9" class="px-6 py-8 text-center text-slate-400">No employees registered yet.</td></tr>`;
                 return;
             }
 
@@ -1176,17 +1917,112 @@
             employees.forEach(emp => {
                 const displayAccess = emp.accessLevel || "No Access";
                 const displayUsername = emp.username || "—";
+                
+                // Read expanded criteria [2]
+                const nationality = emp.nationality || "—";
+                const type = emp.type || "Aljawad";
+                const joinDate = emp.joinDate || "—";
+                const dob = emp.dob || "—";
+                const status = emp.status || "Work";
+                const iqamaExp = emp.iqamaExp || "";
+                const contractExp = emp.contractExp || "";
+
+                // Live dynamic computation of remaining days [2]
+                const iqamaDaysRemain = calculateDaysRemain(iqamaExp);
+                const contractDaysRemain = calculateDaysRemain(contractExp);
+
+                const isLeft = status === "Left";
+
                 tableBody.insertAdjacentHTML('beforeend', `
-                    <tr class="hover:bg-slate-50 transition-colors border-b border-slate-200">
-                        <td class="px-6 py-4 font-semibold text-slate-900">${escapeHTML(emp.fullName)}</td>
-                        <td class="px-6 py-4 text-slate-600 font-mono">${escapeHTML(emp.idNumber)}</td>
-                        <td class="px-6 py-4"><span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700 border border-slate-200">${escapeHTML(emp.jobTitle)}</span></td>
-                        <td class="px-6 py-4 text-slate-600 font-mono">${escapeHTML(emp.phoneNumber)}</td>
-                        <td class="px-6 py-4"><span class="px-2.5 py-1 text-xs font-bold rounded-lg ${getAccessBadgeClass(displayAccess)}">${escapeHTML(displayAccess)}</span></td>
-                        <td class="px-6 py-4 text-slate-500 font-mono">${escapeHTML(displayUsername)}</td>
+                    <tr class="hover:bg-slate-50 transition-colors border-b border-slate-200 ${isLeft ? 'bg-red-50/40 text-slate-400' : ''}">
+                        <td class="px-4 py-3 font-semibold text-slate-900">${escapeHTML(emp.fullName)}</td>
+                        <td class="px-4 py-3"><span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-slate-100 text-slate-700 border border-slate-200">${escapeHTML(emp.jobTitle)}</span></td>
+                        <td class="px-4 py-3">${escapeHTML(nationality)}</td>
+                        <td class="px-4 py-3 font-medium text-slate-500">${escapeHTML(type)}</td>
+                        <td class="px-4 py-3 font-mono">${escapeHTML(joinDate)}</td>
+                        
+                        <!-- IQAMA Remain [2] -->
+                        <td class="px-4 py-3 font-mono font-bold ${iqamaDaysRemain !== "N/A" && iqamaDaysRemain < 30 ? 'text-red-600 animate-pulse' : 'text-slate-700'}">
+                            ${iqamaDaysRemain !== "N/A" ? `${iqamaDaysRemain.toLocaleString()} Days` : 'N/A'}
+                        </td>
+
+                        <!-- Contract Remain [2] -->
+                        <td class="px-4 py-3 font-mono font-bold ${contractDaysRemain !== "N/A" && contractDaysRemain < 30 ? 'text-red-600 animate-pulse' : 'text-slate-700'}">
+                            ${contractDaysRemain !== "N/A" ? `${contractDaysRemain.toLocaleString()} Days` : 'N/A'}
+                        </td>
+
+                        <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${isLeft ? 'bg-gray-100 text-gray-500' : 'bg-green-50 text-green-600'}">${escapeHTML(status)}</span></td>
+                        <td class="px-4 py-3 text-center space-x-1.5 whitespace-nowrap action-bench">
+                            <button onclick="initHREmployeeEdit('${emp.id}')" class="px-2.5 py-1 bg-brand-500 hover:bg-brand-600 text-white rounded text-[10px] font-bold transition">Edit</button>
+                            <button onclick="handleDeleteEmployee('${emp.id}', '${escapeHTML(emp.fullName)}')" class="px-2.5 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-[10px] font-bold transition">Delete</button>
+                        </td>
                     </tr>
                 `);
             });
+        }
+
+        // Live Calculated Remaining Days [2]
+        function calculateDaysRemain(expDateStr) {
+            if (!expDateStr) return "N/A";
+            const today = new Date();
+            const expDate = new Date(expDateStr);
+            const timeDiff = expDate.getTime() - today.getTime();
+            const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+            return daysDiff;
+        }
+
+        // Dynamic inline editing model loader [2]
+        window.initHREmployeeEdit = function(empId) {
+            const emp = window.allEmployees.find(e => e.id === empId);
+            if (!emp) return;
+
+            // Load values to form
+            document.getElementById('emp-doc-id').value = emp.id;
+            document.getElementById('emp-fullname').value = emp.fullName || "";
+            document.getElementById('emp-national-id').value = emp.idNumber || "";
+            document.getElementById('emp-jobtitle').value = emp.jobTitle || "";
+            document.getElementById('emp-phone').value = emp.phoneNumber || "";
+            
+            // Expanded parameters [2]
+            document.getElementById('emp-nationality').value = emp.nationality || "";
+            document.getElementById('emp-type').value = emp.type || "Aljawad";
+            document.getElementById('emp-join-date').value = emp.joinDate || "";
+            document.getElementById('emp-dob').value = emp.dob || "";
+            document.getElementById('emp-status').value = emp.status || "Work";
+            document.getElementById('emp-iqama-exp').value = emp.iqamaExp || "";
+            document.getElementById('emp-contract-exp').value = emp.contractExp || "";
+
+            document.getElementById('emp-access-level').value = emp.accessLevel || "";
+            document.getElementById('emp-username').value = emp.username || "";
+            document.getElementById('emp-password').value = emp.password || "";
+
+            // Adjust interface headers to reflect editing [2]
+            document.getElementById('hr-form-title').textContent = "Modify Staff Profile";
+            document.getElementById('btn-text').textContent = "Save Updates";
+            document.getElementById('edit-indicator').classList.remove('hidden');
+
+            switchView('add-employee-section');
+        }
+
+        window.cancelHREdit = function() {
+            document.getElementById('add-employee-form').reset();
+            document.getElementById('emp-doc-id').value = "";
+            document.getElementById('hr-form-title').textContent = "Register Staff Directory Profile";
+            document.getElementById('btn-text').textContent = "Save Employee";
+            document.getElementById('edit-indicator').classList.add('hidden');
+        }
+
+        window.handleDeleteEmployee = async function(id, name) {
+            if (!confirm(`Are you sure you want to permanently remove employee "${name}" from Aljawad Directory?`)) {
+                return;
+            }
+            try {
+                await deleteDoc(doc(db, "employees", id));
+                showToast("Employee record deleted successfully.", "success");
+            } catch (err) {
+                console.error(err);
+                showToast("Failed to delete record.", "error");
+            }
         }
 
         // Driver Form vehicle select dropdown [3]
@@ -1206,7 +2042,6 @@
             const currentSelected = selectEl.value;
             selectEl.innerHTML = '<option value="" disabled selected hidden>Choose Order...</option>';
             quotes.forEach(quote => {
-                // Populate processed active orders
                 selectEl.insertAdjacentHTML('beforeend', `<option value="${quote.orderId}">${escapeHTML(quote.orderId)} (${escapeHTML(quote.customerName)})</option>`);
             });
             if (currentSelected) selectEl.value = currentSelected;
@@ -1241,35 +2076,46 @@
                 displayEl.textContent = "Current Truck Odometer: 0 KM";
                 displayEl.removeAttribute('data-truck-id');
             }
-            // Trigger recalculation if odometer was already typed
             const typedOdom = document.getElementById('driver-odometer').value;
             if (typedOdom) calculateDriverRemainingKm(typedOdom);
         }
 
-        // Calculate and display KM remaining dynamically on screen [3]
+        // Odometer KM numeric evaluation (Blocks and turns input red if <= current stored mileage) [1, 3]
         window.calculateDriverRemainingKm = function(odomValue) {
             const displayEl = document.getElementById('driver-remaining-km-display');
             const metricsSource = document.getElementById('driver-current-odom-display');
+            const inputField = document.getElementById('driver-odometer');
             if (!displayEl || !metricsSource) return;
 
             const typedOdom = Number(odomValue) || 0;
             const lastOil = Number(metricsSource.dataset.lastOil) || 0;
             const oilLimit = Number(metricsSource.dataset.oilLimit) || 5000;
+            
+            const vehicleDocId = document.getElementById('driver-vehicle').value;
+            const matchedVeh = window.allVehicles.find(v => v.id === vehicleDocId);
 
-            if (typedOdom > 0) {
-                const nextChange = lastOil + oilLimit;
-                const remaining = nextChange - typedOdom;
-                
-                if (remaining < 500) {
-                    displayEl.className = "block text-[10px] font-bold text-red-600 animate-pulse";
-                    displayEl.textContent = `⚠️ Service Required: ${remaining.toLocaleString()} KM Remaining!`;
-                } else {
-                    displayEl.className = "block text-[10px] font-bold text-emerald-600";
-                    displayEl.textContent = `Remaining to Oil Change: ${remaining.toLocaleString()} KM`;
-                }
+            if (matchedVeh && typedOdom <= Number(matchedVeh.liveCarKm)) {
+                // Strict odometer check & Red highlight warning [1, 3]
+                inputField.classList.add('border-red-500', 'bg-red-50', 'text-red-900');
+                displayEl.className = "block text-[10px] font-bold text-red-600";
+                displayEl.textContent = `❌ Blocked: Input must exceed stored odometer (${matchedVeh.liveCarKm} KM)`;
             } else {
-                displayEl.className = "block text-[10px] font-bold text-slate-500";
-                displayEl.textContent = "Remaining to Oil Change: — KM";
+                inputField.classList.remove('border-red-500', 'bg-red-50', 'text-red-900');
+                if (typedOdom > 0) {
+                    const nextChange = lastOil + oilLimit;
+                    const remaining = nextChange - typedOdom;
+                    
+                    if (remaining < 500) {
+                        displayEl.className = "block text-[10px] font-bold text-red-600 animate-pulse";
+                        displayEl.textContent = `⚠️ Service Required: ${remaining.toLocaleString()} KM Remaining!`;
+                    } else {
+                        displayEl.className = "block text-[10px] font-bold text-emerald-600";
+                        displayEl.textContent = `Remaining to Oil Change: ${remaining.toLocaleString()} KM`;
+                    }
+                } else {
+                    displayEl.className = "block text-[10px] font-bold text-slate-500";
+                    displayEl.textContent = "Remaining to Oil Change: — KM";
+                }
             }
         }
 
@@ -1338,7 +2184,6 @@
                 const cb = document.getElementById(`cb-service-${customer.initialMove.replace(/\s+/g, '-')}`);
                 if (cb) {
                     cb.checked = true;
-                    // Trigger manual change event to render conditional fields
                     cb.dispatchEvent(new Event('change'));
                 }
             }
@@ -1378,11 +2223,8 @@
                 descPanel.classList.remove('hidden');
                 selectedServices.forEach(srv => {
                     const srvId = srv.replace(/\s+/g, '-');
-                    
-                    // Base custom block template [4]
                     let specificFormHTML = "";
 
-                    // If 'Domestic Moving' or 'Local Moving' [4]
                     if (srv === 'Domestic Moving' || srv === 'Local Moving') {
                         specificFormHTML = `
                             <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
@@ -1412,7 +2254,6 @@
                         `;
                     }
 
-                    // If 'Dry Distribution' or 'Refer Transport' [4]
                     else if (srv === 'Dry Distribution' || srv === 'Refer Transport') {
                         specificFormHTML = `
                             <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
@@ -1422,7 +2263,6 @@
                         `;
                     }
 
-                    // If 'Storage' [4]
                     else if (srv === 'Storage') {
                         specificFormHTML = `
                             <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
@@ -1457,7 +2297,6 @@
                         `;
                     }
 
-                    // If 'Door to Door Export/Import' or 'Port to Door Import' [4]
                     else if (srv === 'Door to Door Export' || srv === 'Door to Door Import' || srv === 'Port to Door Import' || srv === 'Door to Port Export') {
                         specificFormHTML = `
                             <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
@@ -1474,7 +2313,7 @@
                                     <input type="number" id="db-floors-${srvId}" required placeholder="Floors" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded text-xs">
                                 </div>
                                 <div class="col-span-2 space-y-1">
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Heavy Equipment Support Needed</label>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase">Heavy Equipment Support Needed</label>
                                     <div class="flex flex-wrap gap-4 pt-1">
                                         <label class="inline-flex items-center text-xs text-slate-500">
                                             <input type="checkbox" id="db-crane-${srvId}" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500/50 bg-white mr-1.5 h-3.5 w-3.5"> Crane
@@ -1494,7 +2333,6 @@
                         `;
                     }
 
-                    // If 'Packing Services' [4]
                     else if (srv === 'Packing Services') {
                         specificFormHTML = `
                             <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
@@ -1510,7 +2348,6 @@
                         `;
                     }
 
-                    // If 'Inventory' [4]
                     else if (srv === 'Inventory') {
                         specificFormHTML = `
                             <div class="grid grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border border-slate-200 mt-2">
@@ -1532,7 +2369,7 @@
                                     </label>
                                 </div>
                                 <div class="col-span-2 space-y-1">
-                                    <label class="block text-[10px] font-bold text-slate-500 uppercase">Required Integrations</label>
+                                    <label class="block text-[10px] font-bold text-slate-400 uppercase">Required Integrations</label>
                                     <div class="flex space-x-4 pt-1">
                                         <label class="inline-flex items-center text-xs text-slate-500">
                                             <input type="checkbox" id="inv-odoo-${srvId}" class="rounded border-slate-300 text-brand-500 focus:ring-brand-500/50 bg-white mr-1.5 h-3.5 w-3.5"> Odoo System
@@ -1546,7 +2383,6 @@
                         `;
                     }
 
-                    // Render dynamic Scope description container [4]
                     descContainer.insertAdjacentHTML('beforeend', `
                         <div class="space-y-2 border border-slate-100 bg-white p-4 rounded-xl shadow-sm relative">
                             <span class="text-xs font-bold text-brand-500 block uppercase tracking-wider">${srv} Specific Form</span>
@@ -1569,7 +2405,7 @@
                 descPanel.classList.add('hidden');
             }
 
-            // Storage pricing checker [4]
+            // Storage pricing checker
             const isStorageSelected = selectedServices.includes('Storage');
             const flatPricingBlock = document.getElementById('quote-flat-pricing-block');
 
@@ -1581,7 +2417,6 @@
                 document.getElementById('quote-flat-rate').setAttribute('required', 'true');
             }
 
-            // Recalculate financials live
             calculateFinancialFields();
         }
 
@@ -1707,7 +2542,7 @@
             document.getElementById('quote-vat').value = vat.toFixed(2);
             document.getElementById('quote-grand').value = grand.toFixed(2);
 
-            // Trigger on-screen visualization panel updates [4]
+            // Trigger on-screen visualization panel updates
             const custSelect = document.getElementById('quote-customer');
             const custName = custSelect.selectedIndex >= 0 ? custSelect.options[custSelect.selectedIndex].text : "Unassigned";
 
@@ -1952,14 +2787,14 @@
                         <td class="px-4 py-3">
                             <span class="px-2 py-0.5 text-xs font-bold rounded-lg ${badgeClass}">${escapeHTML(currentStatus)}</span>
                         </td>
-                        <td class="px-4 py-3 text-center">
+                        <td class="px-4 py-3 text-center edit-gate">
                             <button onclick="toggleRowAssignmentPanel('${q.id}')" class="px-3 py-1 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-lg shadow-sm transition-colors">
                                 Dispatch Assignment
                             </button>
                         </td>
                     </tr>
                     <!-- EXPANDABLE ASSIGNMENT MATRIX ROW [5] -->
-                    <tr id="assignment-panel-${q.id}" class="hidden bg-slate-50/50">
+                    <tr id="assignment-panel-${q.id}" class="hidden bg-slate-50/50 edit-gate">
                         <td colspan="7" class="p-6 border-b border-slate-200">
                             <div class="max-w-4xl bg-white border border-slate-200 rounded-xl p-6 space-y-4 shadow-sm">
                                 <div class="flex justify-between items-center pb-2 border-b">
@@ -2059,7 +2894,6 @@
             const otherNotes = document.getElementById(`update-other-notes-${qId}`).value.trim();
             const status = document.getElementById(`update-status-${qId}`).value;
 
-            // Extract multiple selections from checklists [5]
             const superBoxes = document.querySelectorAll(`.order-supervisors-${qId}:checked`);
             const assignedSupervisors = Array.from(superBoxes).map(cb => cb.value);
 
@@ -2081,7 +2915,6 @@
                 });
 
                 showToast("Operational parameters successfully updated and synced!", "success");
-                // Close panel
                 toggleRowAssignmentPanel(qId);
             } catch (error) {
                 console.error("Assignment lifecycle exception:", error);
@@ -2090,20 +2923,61 @@
         }
 
 
-        /* TRANSACTION WRITING LAYERS */
+        /* DASHBOARD METRICS CALCULATION [2] */
 
-        // Write Employee record [2]
-        window.handleFormSubmit = async function(event) {
+        function calculateDashboardMetrics() {
+            // Fleet Count
+            const fleetCount = window.allVehicles.length;
+            document.getElementById('dash-fleet-count').textContent = `${fleetCount} Asset${fleetCount !== 1 ? 's' : ''}`;
+
+            // Active Headcount (Work status) [2]
+            const activeStaff = window.allEmployees.filter(emp => emp.status === "Work").length;
+            document.getElementById('dash-active-headcount').textContent = `${activeStaff} Staff`;
+
+            // Overdue Oil Swaps (<500KM remaining) [2]
+            let overdueSwaps = 0;
+            window.allVehicles.forEach(veh => {
+                const liveKm = Number(veh.liveCarKm) || 0;
+                const oilLimit = Number(veh.oilKmLimit) || 5000;
+                const lastOil = Number(veh.lastChangeOilKm) || 0;
+                const nextOilChangeKm = lastOil + oilLimit;
+                const remainKms = nextOilChangeKm - liveKm;
+                if (remainKms < 500) {
+                    overdueSwaps++;
+                }
+            });
+            document.getElementById('dash-overdue-count').textContent = `${overdueSwaps} Flag${overdueSwaps !== 1 ? 's' : ''}`;
+
+            // Driver Log Submissions [2]
+            const logsCount = window.allDriverLogs.length;
+            document.getElementById('dash-logs-count').textContent = `${logsCount} Entry${logsCount !== 1 ? 'ies' : ''}`;
+        }
+
+
+        /* TRANSACTION WRITING LAYERS - HR INLINE CRUD [2] */
+
+        window.handleEmployeeFormSubmit = async function(event) {
             event.preventDefault();
             if (!db) return;
 
             const submitBtn = document.getElementById('submit-btn');
+            const docId = document.getElementById('emp-doc-id').value;
+
             const fullName = document.getElementById('emp-fullname').value.trim();
             const idNumber = document.getElementById('emp-national-id').value.trim();
             const jobTitle = document.getElementById('emp-jobtitle').value;
             const phoneNumber = document.getElementById('emp-phone').value.trim();
             
-            // Extract optional credentials [2]
+            // Expanded Metadata Fields [2]
+            const nationality = document.getElementById('emp-nationality').value.trim();
+            const type = document.getElementById('emp-type').value;
+            const joinDate = document.getElementById('emp-join-date').value;
+            const dob = document.getElementById('emp-dob').value;
+            const status = document.getElementById('emp-status').value;
+            const iqamaExp = document.getElementById('emp-iqama-exp').value;
+            const contractExp = document.getElementById('emp-contract-exp').value;
+
+            // Optional credentials
             const accessLevel = document.getElementById('emp-access-level').value || null;
             const username = document.getElementById('emp-username').value.trim() || null;
             const password = document.getElementById('emp-password').value.trim() || null;
@@ -2111,18 +2985,31 @@
             submitBtn.disabled = true;
 
             try {
-                await addDoc(collection(db, "employees"), {
+                const payload = {
                     fullName, idNumber, jobTitle, phoneNumber,
+                    nationality, type, joinDate, dob, status, iqamaExp, contractExp,
                     accessLevel, username, password,
                     allowedScreens: [],
-                    createdAt: new Date().toISOString()
-                });
+                    updatedAt: new Date().toISOString()
+                };
 
-                showToast("Employee profile registered successfully!", "success");
-                document.getElementById('add-employee-form').reset();
+                if (docId) {
+                    // Save Update Action (CRUD Editing Bench) [2]
+                    await updateDoc(doc(db, "employees", docId), payload);
+                    showToast("Staff directory profile updated successfully!", "success");
+                } else {
+                    // Standard Create Action
+                    await addDoc(collection(db, "employees"), {
+                        ...payload,
+                        createdAt: new Date().toISOString()
+                    });
+                    showToast("Employee profile registered successfully!", "success");
+                }
+
+                cancelHREdit();
                 setTimeout(() => { switchView('view-employees-section'); }, 1000);
             } catch (error) {
-                console.error("Firestore error:", error);
+                console.error("Firestore HR error:", error);
                 showToast("An error occurred during transaction execution.", "error");
             } finally {
                 submitBtn.disabled = false;
@@ -2162,7 +3049,6 @@
                 });
                 showToast("Customer profile saved successfully!", "success");
                 document.getElementById('add-customer-form').reset();
-                // Trigger conditional hide
                 handleEntityTypeChange("Individual");
                 setTimeout(() => { switchView('create-quote-section'); }, 1000);
             } catch (error) {
@@ -2180,7 +3066,6 @@
             const goodsType = document.getElementById('quote-goods-type').value;
             const soc = document.getElementById('quote-soc').value;
             
-            // Gather selected multiple services [4]
             const selectedServices = [];
             const checkboxes = document.getElementById('quote-services-selection-grid').querySelectorAll('input[type="checkbox"]:checked');
             checkboxes.forEach(cb => { selectedServices.push(cb.value); });
@@ -2190,7 +3075,6 @@
                 return;
             }
 
-            // Gather service specifications description blocks [4]
             const servicesDescriptions = {};
             selectedServices.forEach(srv => {
                 const srvId = srv.replace(/\s+/g, '-');
@@ -2219,7 +3103,6 @@
             const vat = Number(document.getElementById('quote-vat').value);
             const estimatedPrice = Number(document.getElementById('quote-grand').value);
 
-            // Scope exclusions
             const serviceIncludes = document.getElementById('quote-includes').value;
             const serviceExcludes = document.getElementById('quote-excludes').value;
 
@@ -2232,11 +3115,9 @@
             const customerId = custSelect.value;
             const customerName = custSelect.options[custSelect.selectedIndex].text;
 
-            // Multi-day tracker [4]
             const orderId = `JAW-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
             const conditionalPayload = {};
-            // Gather conditional payload parameters dynamically based on selectedServices grid [4]
             if (selectedServices.includes('Domestic Moving') || selectedServices.includes('Local Moving')) {
                 const srvId = selectedServices.includes('Domestic Moving') ? 'Domestic-Moving' : 'Local-Moving';
                 conditionalPayload.mv_origin = document.getElementById(`mv-origin-${srvId}`).value;
@@ -2297,7 +3178,6 @@
                 document.getElementById('add-quote-form').reset();
                 document.getElementById('cust-search').value = "";
                 
-                // Refresh service lists
                 renderServicesGridCheckboxes();
                 handleServiceCheckboxToggle();
 
@@ -2336,7 +3216,158 @@
             }
         }
 
-        // Drivers Pre-Trip form submit [3]
+        // Toggles binary accessory states on Driver portal [3]
+        window.toggleEquipmentModel = function(key) {
+            window.driverEquipmentStates[key] = !window.driverEquipmentStates[key];
+            updateEquipmentGridUI();
+        }
+
+        function updateEquipmentGridUI() {
+            const grid = document.getElementById('driver-materials-grid');
+            if (!grid) return;
+            grid.innerHTML = "";
+
+            MOBILE_GEAR_LIST.forEach(item => {
+                const isActive = window.driverEquipmentStates[item.id];
+                const localizedLabel = item[window.currentMobileLang] || item.en;
+                
+                if (isActive) {
+                    grid.insertAdjacentHTML('beforeend', `
+                        <div onclick="toggleEquipmentModel('${item.id}')" class="border-2 border-green-500 bg-white rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer select-none transition-all duration-200 shadow-sm shadow-green-50 space-y-1">
+                            <span class="text-2xl">💚</span>
+                            <span class="text-[10px] font-black block text-slate-800 uppercase tracking-tight">${escapeHTML(localizedLabel)}</span>
+                        </div>
+                    `);
+                } else {
+                    grid.insertAdjacentHTML('beforeend', `
+                        <div onclick="toggleEquipmentModel('${item.id}')" class="border-2 border-red-500 bg-red-50/20 rounded-2xl p-4 flex flex-col items-center justify-center text-center cursor-pointer select-none transition-all duration-200 shadow-sm shadow-red-50 space-y-1">
+                            <span class="text-2xl">💔</span>
+                            <span class="text-[10px] font-black block text-red-600 uppercase tracking-tight">${escapeHTML(localizedLabel)}</span>
+                        </div>
+                    `);
+                }
+            });
+        }
+
+        // Sign In logic for Portal B Mobile Roster [3]
+        window.handleMobileLogin = function(event) {
+            event.preventDefault();
+            const user = document.getElementById('mob-username').value.trim();
+            const pass = document.getElementById('mob-password').value;
+
+            // Query active roster list
+            const matchedUser = window.allEmployees.find(e => e.username === user && e.password === pass);
+
+            if (matchedUser) {
+                window.activeMobileUser = matchedUser;
+                document.getElementById('mobile-login-card').classList.add('hidden');
+                document.getElementById('mobile-auth-workspace').classList.remove('hidden');
+                
+                // Welcome Banner greeting text [3]
+                const localizedWelcome = window.currentMobileLang === 'ar' ? "مرحباً بك،" : window.currentMobileLang === 'ur' ? "خوش آمدید،" : "Welcome,";
+                document.getElementById('mobile-welcome-banner').textContent = `${localizedWelcome} ${matchedUser.fullName}`;
+                
+                showToast("Logged in successfully!", "success");
+                switchMobileSubView('inspection');
+            } else {
+                showToast("Invalid mobile credential profiles.", "error");
+            }
+        }
+
+        window.signOutMobileUser = function() {
+            window.activeMobileUser = null;
+            document.getElementById('mobile-auth-workspace').classList.add('hidden');
+            document.getElementById('mobile-login-card').classList.remove('hidden');
+            document.getElementById('mobile-login-form').reset();
+            showToast("Mobile session terminated.", "success");
+        }
+
+        window.switchMobileSubView = function(viewKey) {
+            const insEl = document.getElementById('mobile-subview-inspection');
+            const reqEl = document.getElementById('mobile-subview-request');
+            const btnIns = document.getElementById('mob-btn-inspect');
+            const btnReq = document.getElementById('mob-btn-request');
+
+            if (viewKey === 'inspection') {
+                insEl.classList.remove('hidden');
+                reqEl.classList.add('hidden');
+                btnIns.classList.add('bg-brand-500');
+                btnIns.classList.remove('bg-slate-800');
+                btnReq.classList.add('bg-slate-800');
+                btnReq.classList.remove('bg-brand-500');
+            } else {
+                insEl.classList.add('hidden');
+                reqEl.classList.remove('hidden');
+                btnIns.classList.add('bg-slate-800');
+                btnIns.classList.remove('bg-brand-500');
+                btnReq.classList.add('bg-brand-500');
+                btnReq.classList.remove('bg-slate-800');
+            }
+        }
+
+        // Populate Mobile Employee Request selector dropdown live [3]
+        function populateMobileEmployeesList(employees) {
+            const selectEl = document.getElementById('req-employee-name');
+            if (!selectEl) return;
+            selectEl.innerHTML = '<option value="" disabled selected hidden>Select Name...</option>';
+            employees.forEach(emp => {
+                if (emp.status === 'Work') {
+                    selectEl.insertAdjacentHTML('beforeend', `<option value="${escapeHTML(emp.fullName)}">${escapeHTML(emp.fullName)}</option>`);
+                }
+            });
+        }
+
+        window.handleRequestTypeChange = function(typeVal) {
+            const box = document.getElementById('req-other-container');
+            const input = document.getElementById('req-type-other');
+            if (typeVal === "Other") {
+                box.classList.remove('hidden');
+                input.setAttribute('required', 'true');
+            } else {
+                box.classList.add('hidden');
+                input.removeAttribute('required');
+                input.value = "";
+            }
+        }
+
+        // Ticket requests transactional database pushing [3]
+        window.handleEmployeeRequestSubmit = async function(event) {
+            event.preventDefault();
+            if (!db) return;
+
+            const submitBtn = document.getElementById('request-submit-btn');
+            const email = document.getElementById('req-email').value.trim();
+            const fullName = document.getElementById('req-employee-name').value;
+            const requestTypeRaw = document.getElementById('req-type').value;
+            const requestOther = document.getElementById('req-type-other').value.trim();
+            const details = document.getElementById('req-details').value.trim();
+
+            const finalRequestType = requestTypeRaw === "Other" ? requestOther : requestTypeRaw;
+
+            submitBtn.disabled = true;
+
+            try {
+                await addDoc(collection(db, "staff_requests"), {
+                    email, fullName, requestType: finalRequestType, details,
+                    timestamp: new Date().toISOString()
+                });
+
+                showToast("Request registered successfully!", "success");
+                document.getElementById('employee-request-form').reset();
+                document.getElementById('req-other-container').classList.add('hidden');
+
+                document.getElementById('employee-request-form').classList.add('hidden');
+                document.getElementById('drvSuccessScreen').classList.remove('hidden');
+
+            } catch (err) {
+                console.error(err);
+                showToast("An error occurred during submission.", "error");
+            } finally {
+                submitBtn.disabled = false;
+            }
+        }
+
+        // Drivers Pre-Trip form submit with EmailJS and Odometer blocks [1, 3, 4]
         window.handleDriverFormSubmit = async function(event) {
             event.preventDefault();
             if (!db) return;
@@ -2361,39 +3392,85 @@
             const cargo = document.getElementById('driver-cargo').value;
             const cargoNotes = document.getElementById('cargoNotes').value.trim();
 
+            const optionalNotes = document.getElementById('driver-optional-notes').value.trim();
+
             const matchedVeh = window.allVehicles.find(v => v.id === vehicleDocId);
-            if (matchedVeh && odometer < Number(matchedVeh.liveCarKm)) {
-                showToast(`Checkup warning: Entered KM is lower than last logged odometer (${matchedVeh.liveCarKm} KM).`, "error");
+            
+            // Odometer Protection Logic [1, 3]
+            if (matchedVeh && odometer <= Number(matchedVeh.liveCarKm)) {
+                showToast(`Checkup warning: Entered KM must exceed stored odometer (${matchedVeh.liveCarKm} KM).`, "error");
                 return;
             }
 
             submitBtn.disabled = true;
 
             try {
+                // Collect binary equipment metrics [3]
+                const collectEquipOutcome = (key) => {
+                    const isIntact = window.driverEquipmentStates[key];
+                    return isIntact ? "Available & Intact" : "Missing / Damaged";
+                };
+
+                const gearChecks = {
+                    spareTire: collectEquipOutcome("spareTire"),
+                    warningTriangle: collectEquipOutcome("warningTriangle"),
+                    secondSpare: collectEquipOutcome("secondSpare"),
+                    fireExtinguisher: collectEquipOutcome("fireExtinguisher"),
+                    lugWrench: collectEquipOutcome("lugWrench"),
+                    carJack: collectEquipOutcome("carJack")
+                };
+
+                const driverName = window.activeMobileUser ? window.activeMobileUser.fullName : "Mobile User";
+                const email = document.getElementById('drvEmail').value.trim() || "";
+
+                const logDate = document.getElementById('drvDate').value;
+                const fireExtExpire = document.getElementById('drvFireExtDate').value;
+
+                // 1. Update vehicle active KM target [3]
                 const vehicleRef = doc(db, "vehicles", vehicleDocId);
                 await updateDoc(vehicleRef, {
                     liveCarKm: odometer,
                     status: tripStatus
                 });
 
+                // 2. Log full payload containing visual checklist [3]
                 await addDoc(collection(db, "driver_logs"), {
                     vehicleDocId,
                     truckId: matchedVeh ? matchedVeh.truckId : "Unknown ID",
+                    driverName,
                     subOrderId, odometer, routeFrom, routeTo, tripStatus,
                     engineOil, oilNotes: engineOil === 'Other' ? oilNotes : "",
                     tires, tireNotes: tires === 'Other' ? tireNotes : "",
                     windshield, windshieldNotes: windshield === 'Other' ? windshieldNotes : "",
                     cargo, cargoNotes: cargo === 'Other' ? cargoNotes : "",
+                    gearChecks, logDate, fireExtinguisherExpiry: fireExtExpire,
+                    driverNotes: optionalNotes,
                     timestamp: new Date().toISOString()
                 });
 
+                // 3. Dispatch automated summaries via EmailJS [4]
+                if (window.emailjs) {
+                    window.emailjs.send("service_aljawad", "template_driver_checklist", {
+                        driver_name: driverName,
+                        truck_id: matchedVeh ? matchedVeh.truckId : "Unknown",
+                        odometer: odometer,
+                        route: `${routeFrom} to ${routeTo}`,
+                        order_no: subOrderId,
+                        recipient_email_1: "Haider@aljawad.sa.com",
+                        recipient_email_2: "Mohamed.HAidar@sh-eng.menofia.edu.eg",
+                        driver_email: email || "no-reply@aljawad.com"
+                    }).then(() => {
+                        console.log("Email summary successfully dispatched.");
+                    }).catch(err => {
+                        console.warn("EmailJS transaction failed:", err);
+                    });
+                }
+
                 showToast("Driver inspection checklist uploaded!", "success");
-                document.getElementById('driver-mobile-form').reset();
                 
-                document.getElementById('oilNotes-container').classList.add('hidden');
-                document.getElementById('tireNotes-container').classList.add('hidden');
-                document.getElementById('windshieldNotes-container').classList.add('hidden');
-                document.getElementById('cargoNotes-container').classList.add('hidden');
+                // Clear and hide mobile success screen
+                document.getElementById('driver-mobile-form').classList.add('hidden');
+                document.getElementById('drvSuccessScreen').classList.remove('hidden');
 
             } catch (error) {
                 console.error("Inspection write error:", error);
@@ -2401,6 +3478,114 @@
             } finally {
                 submitBtn.disabled = false;
             }
+        }
+
+        window.resetDriverApp = function() {
+            document.getElementById('driver-mobile-form').reset();
+            document.getElementById('employee-request-form').reset();
+            
+            document.getElementById('oilNotes-container').classList.add('hidden');
+            document.getElementById('tireNotes-container').classList.add('hidden');
+            document.getElementById('windshieldNotes-container').classList.add('hidden');
+            document.getElementById('cargoNotes-container').classList.add('hidden');
+
+            // Reset binary switches back to true [3]
+            Object.keys(window.driverEquipmentStates).forEach(k => {
+                window.driverEquipmentStates[k] = true;
+            });
+            updateEquipmentGridUI();
+
+            document.getElementById('drvSuccessScreen').classList.add('hidden');
+            document.getElementById('driver-mobile-form').classList.remove('hidden');
+            document.getElementById('employee-request-form').classList.remove('hidden');
+        };
+
+
+        /* HR ANALYTICS COMPILATIONS WITH NATIONALITY & DESIGNATION INDICATORS [2] */
+
+        function calculateHRMetrics() {
+            const tbody = document.getElementById('print-hr-audit-body');
+            const nationalityContainer = document.getElementById('nationality-indicators');
+            const designationContainer = document.getElementById('designation-indicators');
+            
+            if (!tbody || !nationalityContainer || !designationContainer) return;
+
+            tbody.innerHTML = "";
+            nationalityContainer.innerHTML = "";
+            designationContainer.innerHTML = "";
+
+            // Active headcount (status == "Work") [2]
+            const activeStaff = window.allEmployees.filter(emp => emp.status === "Work");
+            document.getElementById('metric-active-count').textContent = `${activeStaff.length} Staff`;
+
+            // Company Resource Ratio [2]
+            const internalCount = window.allEmployees.filter(emp => emp.type === "Aljawad").length;
+            const outsourceCount = window.allEmployees.filter(emp => emp.type === "Outsource").length;
+            
+            document.getElementById('metric-ratio-internal').textContent = internalCount;
+            document.getElementById('metric-ratio-outsource').textContent = outsourceCount;
+
+            // Attrition count [2]
+            const attritionCount = window.allEmployees.filter(emp => emp.status === "Left").length;
+            document.getElementById('metric-left-count').textContent = `${attritionCount} Staff`;
+
+            // Calculate Nationality Ratios dynamically [2]
+            const totalEmployeesCount = window.allEmployees.length || 1;
+            const nationalityCounts = {};
+            const designationCounts = {};
+
+            window.allEmployees.forEach(emp => {
+                const nat = emp.nationality || "Other";
+                const title = emp.jobTitle || "Other";
+                
+                nationalityCounts[nat] = (nationalityCounts[nat] || 0) + 1;
+                designationCounts[title] = (designationCounts[title] || 0) + 1;
+
+                // Render print rows [2]
+                tbody.insertAdjacentHTML('beforeend', `
+                    <tr class="border-b border-slate-100">
+                        <td class="px-4 py-2 font-bold text-slate-800">${escapeHTML(emp.fullName)}</td>
+                        <td class="px-4 py-2">${escapeHTML(emp.jobTitle)}</td>
+                        <td class="px-4 py-2">${escapeHTML(emp.nationality || "—")}</td>
+                        <td class="px-4 py-2">${escapeHTML(emp.type || "Aljawad")}</td>
+                        <td class="px-4 py-2">${escapeHTML(emp.status || "Work")}</td>
+                    </tr>
+                `);
+            });
+
+            // Populate Nationality Progress Indicators [2]
+            Object.keys(nationalityCounts).forEach(nat => {
+                const count = nationalityCounts[nat];
+                const percentage = ((count / totalEmployeesCount) * 100).toFixed(0);
+                nationalityContainer.insertAdjacentHTML('beforeend', `
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-semibold">
+                            <span class="text-slate-700">${escapeHTML(nat)}</span>
+                            <span class="text-slate-500">${count} (${percentage}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div class="bg-brand-500 h-full" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `);
+            });
+
+            // Populate Designation Progress Indicators [2]
+            Object.keys(designationCounts).forEach(title => {
+                const count = designationCounts[title];
+                const percentage = ((count / totalEmployeesCount) * 100).toFixed(0);
+                designationContainer.insertAdjacentHTML('beforeend', `
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs font-semibold">
+                            <span class="text-slate-700">${escapeHTML(title)}</span>
+                            <span class="text-slate-500">${count} (${percentage}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div class="bg-slate-700 h-full" style="width: ${percentage}%"></div>
+                        </div>
+                    </div>
+                `);
+            });
         }
 
 
@@ -2426,15 +3611,12 @@
             window.calendarInstance.render();
         }
 
-        // Plots multi-day events continuously based on range [6]
         function updateCalendarEvents(quotes) {
             if (!window.calendarInstance) return;
 
-            // Trigger criteria: Plot ONLY if status is set to 'Process' [6]
             const approvedQuotes = quotes.filter(q => q.status === 'Process');
 
             const calendarEvents = approvedQuotes.map(quote => {
-                // To display spanning dates continuously, end date is exclusive [6]
                 let rawEndDate = new Date(quote.assignedDateTo || quote.moveDateTo);
                 rawEndDate.setDate(rawEndDate.getDate() + 1);
                 const calendarFormattedEndDate = rawEndDate.toISOString().split('T')[0];
@@ -2444,7 +3626,7 @@
                     title: `${quote.orderId} - ${quote.customerName}`,
                     start: quote.assignedDateFrom || quote.moveDateFrom,
                     end: calendarFormattedEndDate, // Continuous multi-day spanning [6]
-                    backgroundColor: '#FF6600', // Plotting using Al-Jawaad Orange Brand Color
+                    backgroundColor: '#FF6600', // Plotting using Al-Jawaad Brand Orange Color
                     extendedProps: { ...quote }
                 };
             });
@@ -2453,7 +3635,6 @@
             window.calendarInstance.addEventSource(calendarEvents);
         }
 
-        // Show details when calendar events are clicked [6]
         function displayCalendarEventDetails(event) {
             const props = event.extendedProps;
             document.getElementById('modal-order-id').textContent = `Order Profile: ${props.orderId}`;
@@ -2593,6 +3774,95 @@
         }
 
 
+        /* AUTOMATED RUN-ONCE SEEDING LOGIC [2] */
+
+        async function verifyAndSeedDatabase() {
+            try {
+                const employeesSnap = await getDocs(collection(db, "employees"));
+                const vehiclesSnap = await getDocs(collection(db, "vehicles"));
+
+                let seeded = false;
+
+                // Employees Seeding (Requested Core Drivers List) [2]
+                if (employeesSnap.empty) {
+                    const defaultDrivers = [
+                        "Erl John Villalobos Amolong", "Richard Borromeo Antonio", "Isharar Muhammad Umar", 
+                        "Muhammad Safeer Muhammad Akbar", "Zaheer Ahmad Inayat Ali", "Sultan Tipu", 
+                        "Ruel Edillo Cunanan", "Mubarak Ali Jamaldin Jetun", "Awo Din Eisa Khan"
+                    ];
+                    
+                    let idx = 1001;
+                    for (const name of defaultDrivers) {
+                        await addDoc(collection(db, "employees"), {
+                            fullName: name,
+                            idNumber: `24000${idx++}`,
+                            jobTitle: "Driver",
+                            phoneNumber: `+96650000${idx}`,
+                            nationality: "Filipino",
+                            type: "Aljawad",
+                            joinDate: "2026-01-01",
+                            dob: "1992-05-12",
+                            status: "Work",
+                            iqamaExp: "2027-12-31",
+                            contractExp: "2028-06-30",
+                            accessLevel: "Driver",
+                            username: name.toLowerCase().split(' ')[0], // simple unique username
+                            password: "Aljawad@driver",
+                            createdAt: new Date().toISOString()
+                        });
+                    }
+                    seeded = true;
+                }
+
+                // Vehicles Seeding (Core Close VAN Fleet Assets) [2]
+                if (vehiclesSnap.empty) {
+                    const defaultVehicles = [
+                        "2733 NRA Close VAN", "2646 NRA Close VAN", "2648 NRA Close VAN", 
+                        "4704 ZSAClose VAN", "4705 ZSAClose VAN", "4706 ZSAClose VAN", 
+                        "4707 ZSAClose VAN", "8 NXB Pick Up"
+                    ];
+                    
+                    for (const truckId of defaultVehicles) {
+                        await addDoc(collection(db, "vehicles"), {
+                            truckId,
+                            liveCarKm: 100000,
+                            oilKmLimit: 5000,
+                            lastChangeOilKm: 100000,
+                            status: "Available",
+                            createdAt: new Date().toISOString()
+                        });
+                    }
+                    seeded = true;
+                }
+
+                if (seeded) {
+                    showToast("Database initial configurations loaded successfully.", "success");
+                }
+
+            } catch (err) {
+                console.error("Operational seeding engine exception:", err);
+            }
+        }
+
+
+        /* DIRECT PORTAL CONDITIONAL INJECTIONS [3] */
+
+        window.toggleInspectionNote = function(selectId, targetBoxId) {
+            const select = document.getElementById(selectId);
+            const target = document.getElementById(targetBoxId);
+            if (!select || !target) return;
+
+            if (select.value === "Other") {
+                target.classList.remove('hidden');
+                target.querySelector('textarea').setAttribute('required', 'true');
+            } else {
+                target.classList.add('hidden');
+                target.querySelector('textarea').removeAttribute('required');
+                target.querySelector('textarea').value = "";
+            }
+        }
+
+
         /* COMMON STANDARDS HELPERS */
 
         function showToast(message, type = "success") {
@@ -2620,7 +3890,7 @@
                 case 'Super Admin': return 'bg-red-50 text-red-700 border border-red-200';
                 case 'Supervisor': return 'bg-orange-50 text-orange-700 border border-orange-200';
                 case 'Warehouse': return 'bg-amber-50 text-amber-700 border border-amber-200';
-                case 'Driver': return 'bg-blue-50 text-blue-700 border border-blue-200';
+                case 'Driver Portal': return 'bg-blue-50 text-blue-700 border border-blue-200';
                 case 'Sales': return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
                 case 'CS': return 'bg-purple-50 text-purple-700 border border-purple-200';
                 case 'Coordinator': return 'bg-pink-50 text-pink-700 border border-pink-200';
@@ -2642,12 +3912,47 @@
         }
 
         // App Initialisation sequence
-        document.addEventListener('DOMContentLoaded', () => {
-            initCalendarInstance();
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Load Admin credentials configuration locally if updated [1]
+            const storedAdmin = localStorage.getItem("aljawad_admin_config");
+            if (storedAdmin) {
+                window.currentAdminConfig = JSON.parse(storedAdmin);
+            }
+
+            // Verify if parameters enforce a specific routing model directly
+            const urlParams = new URLSearchParams(window.location.search);
+            const viewQuery = urlParams.get('view');
+
+            if (db) {
+                await verifyAndSeedDatabase();
+            }
+
+            // Standard CRM Checkbox components initial rendering [4]
             renderServicesGridCheckboxes();
             handleServiceCheckboxToggle();
+            
+            // Core calendar loader [6]
+            initCalendarInstance();
+            
+            // Database listeners setup [7]
             subscribeToDatabaseStreams();
+
+            // Mobile pre-trip materials checklist initialization [3]
+            updateEquipmentGridUI();
+
+            // Initialize three-language translation engine default states [3]
+            setMobileLanguage('en');
+
+            if (viewQuery === 'driver') {
+                document.getElementById('session-role').value = "Driver";
+                changeSessionRole("Driver");
+            } else {
+                // Launch strict admin auth modal on startup [1]
+                document.getElementById('admin-login-modal').classList.remove('hidden');
+                document.getElementById('app-sidebar').classList.add('hidden');
+            }
         });
     </script>
 </body>
 </html>
+
